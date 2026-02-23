@@ -5,3 +5,4 @@
  */
 
 export * from './invoice.service';
+export * from './invoicePdf.service';

@@ -54,6 +54,24 @@ export default function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
   const [lines, setLines] = useState<InvoiceLineRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  async function handleDownloadPdf() {
+    setIsDownloading(true);
+    try {
+      const response = await fetch(`/api/invoices/${invoiceId}/pdf`);
+      if (!response.ok) throw new Error('Download failed');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice-${invoiceId}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } finally {
+      setIsDownloading(false);
+    }
+  }
 
   useEffect(() => {
     async function fetchInvoice() {
@@ -125,6 +143,13 @@ export default function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
             {invoice.status}
           </span>
           <p className="text-2xl font-bold mt-2">{formatCents(invoice.total_cents)}</p>
+          <button
+            onClick={handleDownloadPdf}
+            disabled={isDownloading}
+            className="mt-2 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+          >
+            {isDownloading ? 'Downloading...' : 'Download PDF'}
+          </button>
         </div>
       </div>
 

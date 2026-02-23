@@ -1,0 +1,34 @@
+/**
+ * @module api/invoices/pdf
+ * @description API route for generating and downloading invoice PDFs
+ * @safety RED
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { generateInvoicePdf } from '@/modules/invoices/services';
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    const pdfBytes = await generateInvoicePdf(id);
+
+    return new NextResponse(pdfBytes, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="invoice-${id}.pdf"`,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+
+    if (message === 'Invoice not found') {
+      return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
