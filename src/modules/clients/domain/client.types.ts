@@ -11,6 +11,7 @@ export interface Client {
   email: string | null;
   phone: string | null;
   notes: string | null;
+  telegram_chat_id: string | null;
   archived: boolean;
   created_at: Date;
 }
@@ -28,4 +29,5 @@ export interface UpdateClientInput {
   email?: string | null;
   phone?: string | null;
   notes?: string | null;
+  telegram_chat_id?: string | null;
 }

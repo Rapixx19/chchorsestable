@@ -22,7 +22,7 @@ interface InvoiceRow {
   total_cents: number;
   status: string;
   created_at: string;
-  clients: { name: string };
+  clients: { name: string; telegram_chat_id: string | null };
 }
 
 interface InvoiceLineRow {
@@ -57,6 +57,7 @@ export default function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
   const [error, setError] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  const [isSendingTelegram, setIsSendingTelegram] = useState(false);
 
   async function handleDownloadPdf() {
     setIsDownloading(true);
@@ -93,6 +94,24 @@ export default function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
     }
   }
 
+  async function handleSendTelegram() {
+    setIsSendingTelegram(true);
+    try {
+      const response = await fetch(`/api/invoices/${invoiceId}/send-telegram`, {
+        method: 'POST',
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to send via Telegram');
+      }
+      window.location.reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send via Telegram');
+    } finally {
+      setIsSendingTelegram(false);
+    }
+  }
+
   useEffect(() => {
     async function fetchInvoice() {
       setIsLoading(true);
@@ -100,7 +119,7 @@ export default function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
 
       const { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
-        .select(`*, clients!inner(name)`)
+        .select(`*, clients!inner(name, telegram_chat_id)`)
         .eq('id', invoiceId)
         .single();
 
@@ -177,6 +196,15 @@ export default function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
               className="mt-2 ml-2 px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
             >
               {isApproving ? 'Approving...' : 'Approve Invoice'}
+            </button>
+          )}
+          {invoice.status === 'approved' && invoice.clients.telegram_chat_id && (
+            <button
+              onClick={handleSendTelegram}
+              disabled={isSendingTelegram}
+              className="mt-2 ml-2 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+            >
+              {isSendingTelegram ? 'Sending...' : 'Send via Telegram'}
             </button>
           )}
         </div>
