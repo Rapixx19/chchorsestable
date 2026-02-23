@@ -5,6 +5,7 @@
  */
 
 import type { Invoice, CreateInvoiceInput, UpdateInvoiceInput } from '../domain/invoice.types';
+import { createClient } from '@/infra/supabase/server';
 
 export interface InvoiceService {
   getAll(): Promise<Invoice[]>;
@@ -15,6 +16,7 @@ export interface InvoiceService {
   delete(id: string): Promise<void>;
   send(id: string): Promise<Invoice>;
   markAsPaid(id: string): Promise<Invoice>;
+  approveInvoice(id: string): Promise<void>;
 }
 
 export function createInvoiceService(): InvoiceService {
@@ -58,5 +60,42 @@ export function createInvoiceService(): InvoiceService {
       // TODO: Implement with Supabase
       throw new Error('Not implemented');
     },
+
+    async approveInvoice(_id: string): Promise<void> {
+      // Use standalone function
+      throw new Error('Use standalone approveInvoice function');
+    },
   };
+}
+
+export async function approveInvoice(invoiceId: string): Promise<void> {
+  const supabase = await createClient();
+
+  // Check current status
+  const { data: invoice, error: fetchError } = await supabase
+    .from('invoices')
+    .select('status')
+    .eq('id', invoiceId)
+    .single();
+
+  if (fetchError || !invoice) {
+    throw new Error('Invoice not found');
+  }
+
+  if (invoice.status !== 'draft') {
+    throw new Error('Invoice can only be approved from draft status');
+  }
+
+  // Update to approved
+  const { error: updateError } = await supabase
+    .from('invoices')
+    .update({
+      status: 'approved',
+      approved_at: new Date().toISOString(),
+    })
+    .eq('id', invoiceId);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
 }

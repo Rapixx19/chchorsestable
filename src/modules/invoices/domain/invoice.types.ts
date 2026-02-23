@@ -4,7 +4,7 @@
  * @safety RED
  */
 
-export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+export type InvoiceStatus = 'draft' | 'approved' | 'sent' | 'paid' | 'overdue' | 'cancelled';
 
 export interface InvoiceLineItem {
   id: string;
@@ -27,6 +27,7 @@ export interface Invoice {
   dueDate: Date;
   issuedAt?: Date;
   paidAt?: Date;
+  approvedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -39,6 +39,7 @@ interface InvoiceLineRow {
 
 const statusColors: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-800',
+  approved: 'bg-yellow-100 text-yellow-800',
   sent: 'bg-blue-100 text-blue-800',
   paid: 'bg-green-100 text-green-800',
   overdue: 'bg-red-100 text-red-800',
@@ -55,6 +56,7 @@ export default function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
 
   async function handleDownloadPdf() {
     setIsDownloading(true);
@@ -70,6 +72,24 @@ export default function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
       window.URL.revokeObjectURL(url);
     } finally {
       setIsDownloading(false);
+    }
+  }
+
+  async function handleApprove() {
+    setIsApproving(true);
+    try {
+      const response = await fetch(`/api/invoices/${invoiceId}/approve`, {
+        method: 'POST',
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Approval failed');
+      }
+      window.location.reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Approval failed');
+    } finally {
+      setIsApproving(false);
     }
   }
 
@@ -150,6 +170,15 @@ export default function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
           >
             {isDownloading ? 'Downloading...' : 'Download PDF'}
           </button>
+          {invoice.status === 'draft' && (
+            <button
+              onClick={handleApprove}
+              disabled={isApproving}
+              className="mt-2 ml-2 px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+            >
+              {isApproving ? 'Approving...' : 'Approve Invoice'}
+            </button>
+          )}
         </div>
       </div>
 
