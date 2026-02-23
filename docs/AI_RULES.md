@@ -112,3 +112,34 @@ Critical modules require integration tests.
 ## 10. ASK IF UNSURE
 
 Confidence < 90% → ask user.
+
+---
+
+## 11. LOW COMPLEXITY PRINCIPLE
+
+AI must prefer the simplest working solution.
+
+Rules:
+
+- Avoid unnecessary abstractions
+- Avoid premature optimization
+- Avoid complex patterns unless required
+- Prefer small functions over large systems
+- Prefer built-in libraries over external dependencies
+- Minimize lines of code while preserving clarity
+- Do not introduce frameworks inside modules
+
+If multiple solutions exist → choose the least complex.
+
+---
+
+## 12. PERFORMANCE & WEIGHT CONTROL
+
+AI must minimize:
+
+- bundle size
+- dependencies
+- runtime cost
+- database queries
+
+Avoid heavy libraries unless justified.

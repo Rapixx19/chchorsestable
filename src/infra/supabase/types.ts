@@ -6,17 +6,9 @@
 
 export type Database = {
   public: {
-    Tables: {
-      // TODO: Generate from Supabase CLI
-    };
-    Views: {
-      // TODO: Generate from Supabase CLI
-    };
-    Functions: {
-      // TODO: Generate from Supabase CLI
-    };
-    Enums: {
-      // TODO: Generate from Supabase CLI
-    };
+    Tables: Record<string, never>; // TODO: Generate from Supabase CLI
+    Views: Record<string, never>; // TODO: Generate from Supabase CLI
+    Functions: Record<string, never>; // TODO: Generate from Supabase CLI
+    Enums: Record<string, never>; // TODO: Generate from Supabase CLI
   };
 };
