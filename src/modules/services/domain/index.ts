@@ -5,5 +5,4 @@
  */
 
 export * from './service.types';
-export * from './service.entity';
 export * from './service.logic';

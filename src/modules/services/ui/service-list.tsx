@@ -14,6 +14,16 @@ interface ServiceListProps {
   onDelete?: (service: Service) => void;
 }
 
+const BILLING_UNIT_LABELS: Record<Service['billing_unit'], string> = {
+  one_time: 'One-time',
+  monthly: '/month',
+  per_session: '/session',
+};
+
+function formatPrice(cents: number): string {
+  return (cents / 100).toFixed(2);
+}
+
 export function ServiceList({ services, onSelect, onDelete }: ServiceListProps) {
   if (services.length === 0) {
     return <p>No services found.</p>;
@@ -25,8 +35,11 @@ export function ServiceList({ services, onSelect, onDelete }: ServiceListProps) 
         <li key={service.id}>
           <div>
             <strong>{service.name}</strong>
-            <span>${service.price.toFixed(2)}</span>
-            {!service.active && <span>(Inactive)</span>}
+            <span>
+              CHF {formatPrice(service.price_cents)}
+              {service.billing_unit !== 'one_time' && ` ${BILLING_UNIT_LABELS[service.billing_unit]}`}
+            </span>
+            {service.archived && <span>(Archived)</span>}
           </div>
           <div>
             {onSelect && (

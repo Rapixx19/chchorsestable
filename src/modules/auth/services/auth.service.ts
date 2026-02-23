@@ -1,38 +1,69 @@
 /**
  * @module auth/services
- * @description Authentication service for IO operations
+ * @description Authentication service using Supabase
  * @safety RED
  */
 
-import type { LoginCredentials, AuthResult, User } from '../domain/auth.types';
+import { supabase } from "@/infra/supabase/client";
+
+export interface AuthResult {
+  success: boolean;
+  error?: string;
+}
 
 export interface AuthService {
-  login(credentials: LoginCredentials): Promise<AuthResult>;
-  logout(): Promise<void>;
-  getCurrentUser(): Promise<User | null>;
-  refreshSession(): Promise<AuthResult>;
+  login(email: string, password: string): Promise<AuthResult>;
+  signup(email: string, password: string): Promise<AuthResult>;
+  logout(): Promise<AuthResult>;
+  getCurrentUser(): Promise<AuthResult & { user?: unknown }>;
 }
 
-export function createAuthService(): AuthService {
-  return {
-    async login(_credentials: LoginCredentials): Promise<AuthResult> {
-      // TODO: Implement with Supabase
-      throw new Error('Not implemented');
-    },
+class SupabaseAuthService implements AuthService {
+  async login(email: string, password: string): Promise<AuthResult> {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    async logout(): Promise<void> {
-      // TODO: Implement with Supabase
-      throw new Error('Not implemented');
-    },
+    if (error) {
+      return { success: false, error: error.message };
+    }
 
-    async getCurrentUser(): Promise<User | null> {
-      // TODO: Implement with Supabase
-      throw new Error('Not implemented');
-    },
+    return { success: true };
+  }
 
-    async refreshSession(): Promise<AuthResult> {
-      // TODO: Implement with Supabase
-      throw new Error('Not implemented');
-    },
-  };
+  async signup(email: string, password: string): Promise<AuthResult> {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  }
+
+  async logout(): Promise<AuthResult> {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  }
+
+  async getCurrentUser(): Promise<AuthResult & { user?: unknown }> {
+    const { data, error } = await supabase.auth.getUser();
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, user: data.user };
+  }
 }
+
+export const authService: AuthService = new SupabaseAuthService();

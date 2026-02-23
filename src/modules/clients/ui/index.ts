@@ -1,7 +1,8 @@
 /**
  * @module clients/ui
- * @description React components for client management UI
- * @safety YELLOW
+ * @description UI exports for clients module
+ * @safety GREEN
  */
 
-export * from './client-list';
+export { default as CreateClientForm } from './CreateClientForm';
+export { default as ClientsList } from './ClientsList';

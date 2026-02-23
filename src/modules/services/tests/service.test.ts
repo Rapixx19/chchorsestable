@@ -33,12 +33,42 @@ describe('service.logic', () => {
 
   describe('validateCreateServiceInput', () => {
     it('should return empty array for valid input', () => {
-      expect(validateCreateServiceInput({ name: 'Haircut', price: 25 })).toEqual([]);
+      expect(validateCreateServiceInput({
+        stable_id: 'stable-123',
+        name: 'Haircut',
+        price_cents: 2500,
+        billing_unit: 'one_time',
+      })).toEqual([]);
     });
 
     it('should return errors for invalid input', () => {
-      const errors = validateCreateServiceInput({ name: 'A', price: -10 });
-      expect(errors).toHaveLength(2);
+      const errors = validateCreateServiceInput({
+        stable_id: '',
+        name: 'A',
+        price_cents: -10,
+        billing_unit: 'invalid' as 'one_time',
+      });
+      expect(errors).toHaveLength(4);
+    });
+
+    it('should validate stable_id is required', () => {
+      const errors = validateCreateServiceInput({
+        stable_id: '',
+        name: 'Valid Service',
+        price_cents: 1000,
+        billing_unit: 'monthly',
+      });
+      expect(errors).toContain('Stable ID is required');
+    });
+
+    it('should validate billing_unit enum', () => {
+      const errors = validateCreateServiceInput({
+        stable_id: 'stable-123',
+        name: 'Valid Service',
+        price_cents: 1000,
+        billing_unit: 'weekly' as 'one_time',
+      });
+      expect(errors).toContain('Billing unit must be one_time, monthly, or per_session');
     });
   });
 });

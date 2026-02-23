@@ -1,9 +1,8 @@
 /**
  * @module clients/domain
- * @description Pure business logic for client management
+ * @description Domain exports for clients module
  * @safety YELLOW
  */
 
 export * from './client.types';
-export * from './client.entity';
 export * from './client.logic';
