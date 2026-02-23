@@ -24,6 +24,9 @@ export default function DashboardPage() {
         <Link href="/assignments" className="p-3 border rounded hover:bg-gray-50">
           Assignments
         </Link>
+        <Link href="/invoices" className="p-3 border rounded hover:bg-gray-50">
+          Invoices
+        </Link>
       </nav>
     </main>
   );
