@@ -70,7 +70,7 @@ export default function UpcomingInvoices() {
           ))}
         </div>
       ) : invoices.length === 0 ? (
-        <p className="text-gray-400 text-sm py-4 text-center">No pending invoices</p>
+        <p className="text-zinc-500 text-sm py-4 text-center">No pending invoices</p>
       ) : (
         <div className="space-y-2">
           {invoices.map((invoice) => (

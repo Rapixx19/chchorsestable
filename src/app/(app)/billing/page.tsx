@@ -78,7 +78,7 @@ export default function BillingPage() {
     return (
       <main className="min-h-screen bg-gray-900 p-6 lg:p-8">
         <div className="max-w-4xl mx-auto">
-          <p className="text-gray-400">Loading...</p>
+          <p className="text-zinc-500">Loading...</p>
         </div>
       </main>
     );
@@ -88,7 +88,7 @@ export default function BillingPage() {
     return (
       <main className="min-h-screen bg-gray-900 p-6 lg:p-8">
         <div className="max-w-4xl mx-auto">
-          <p className="text-gray-400">No stable found.</p>
+          <p className="text-zinc-500">No stable found.</p>
         </div>
       </main>
     );
@@ -135,7 +135,12 @@ export default function BillingPage() {
           </div>
 
           {displayedPeriods.length === 0 ? (
-            <p className="text-gray-400">No billing periods found.</p>
+            <div className="glass-card rounded-v-card p-12 text-center">
+              <p className="text-zinc-500 mb-4">No billing periods found.</p>
+              <p className="text-zinc-600 text-sm">
+                Create a billing period to start tracking your invoices.
+              </p>
+            </div>
           ) : (
             <div className="space-y-3">
               {displayedPeriods.map((period) => (

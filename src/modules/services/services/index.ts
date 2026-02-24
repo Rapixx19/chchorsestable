@@ -5,3 +5,4 @@
  */
 
 export * from './service.service';
+export * from './import.service';

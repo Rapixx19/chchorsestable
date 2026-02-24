@@ -4,7 +4,7 @@
  * @safety RED
  */
 
-import { PDFDocument, StandardFonts, rgb, PDFImage } from 'pdf-lib';
+import { PDFDocument, StandardFonts, rgb, PDFImage, PDFFont } from 'pdf-lib';
 import { createClient } from '@/infra/supabase/server';
 
 interface InvoiceWithJoins {
@@ -38,6 +38,19 @@ interface InvoiceLine {
 
 function formatCents(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
+}
+
+function truncateText(text: string, font: PDFFont, size: number, maxWidth: number): string {
+  if (font.widthOfTextAtSize(text, size) <= maxWidth) {
+    return text;
+  }
+
+  let truncated = text;
+  while (truncated.length > 0 && font.widthOfTextAtSize(truncated + '...', size) > maxWidth) {
+    truncated = truncated.slice(0, -1);
+  }
+
+  return truncated.length > 0 ? truncated + '...' : text.slice(0, 3) + '...';
 }
 
 export async function generateInvoicePdf(invoiceId: string): Promise<Uint8Array> {
@@ -110,8 +123,9 @@ export async function generateInvoicePdf(invoiceId: string): Promise<Uint8Array>
     });
   }
 
-  // Stable name (right-aligned)
-  const stableName = typedInvoice.stables.name;
+  // Stable name (right-aligned, with truncation for long names)
+  const maxHeaderWidth = pageWidth - margin - logoSize - 20; // Leave buffer between logo and text
+  const stableName = truncateText(typedInvoice.stables.name, fontBold, 16, maxHeaderWidth);
   const stableNameWidth = fontBold.widthOfTextAtSize(stableName, 16);
   page.drawText(stableName, {
     x: pageWidth - stableNameWidth,
@@ -121,13 +135,13 @@ export async function generateInvoicePdf(invoiceId: string): Promise<Uint8Array>
     color: rgb(0, 0, 0),
   });
 
-  // Bank details (right-aligned, below stable name)
+  // Bank details (right-aligned, below stable name, with truncation)
   let bankY = y - 16;
   const bankColor = rgb(0.4, 0.4, 0.4);
   const bankSize = 10;
 
   if (typedInvoice.stables.bank_name) {
-    const bankText = `Bank: ${typedInvoice.stables.bank_name}`;
+    const bankText = truncateText(`Bank: ${typedInvoice.stables.bank_name}`, font, bankSize, maxHeaderWidth);
     const bankTextWidth = font.widthOfTextAtSize(bankText, bankSize);
     page.drawText(bankText, {
       x: pageWidth - bankTextWidth,
@@ -140,7 +154,7 @@ export async function generateInvoicePdf(invoiceId: string): Promise<Uint8Array>
   }
 
   if (typedInvoice.stables.account_number) {
-    const accountText = `Account: ${typedInvoice.stables.account_number}`;
+    const accountText = truncateText(`Account: ${typedInvoice.stables.account_number}`, font, bankSize, maxHeaderWidth);
     const accountTextWidth = font.widthOfTextAtSize(accountText, bankSize);
     page.drawText(accountText, {
       x: pageWidth - accountTextWidth,
@@ -153,7 +167,7 @@ export async function generateInvoicePdf(invoiceId: string): Promise<Uint8Array>
   }
 
   if (typedInvoice.stables.iban) {
-    const ibanText = `IBAN: ${typedInvoice.stables.iban}`;
+    const ibanText = truncateText(`IBAN: ${typedInvoice.stables.iban}`, font, bankSize, maxHeaderWidth);
     const ibanTextWidth = font.widthOfTextAtSize(ibanText, bankSize);
     page.drawText(ibanText, {
       x: pageWidth - ibanTextWidth,

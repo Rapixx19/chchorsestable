@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { generateInvoicePdf } from '@/modules/invoices/services';
+import { sendOwnerNotification } from '@/modules/notifications/services';
 
 export async function GET(
   request: NextRequest,
@@ -15,6 +16,12 @@ export async function GET(
     const { id } = await params;
 
     const pdfBytes = await generateInvoicePdf(id);
+
+    // Notify stable owner (fire-and-forget, don't block response)
+    sendOwnerNotification({
+      type: 'pdf_generated',
+      invoiceId: id,
+    }).catch((err) => console.warn('Owner notification failed:', err));
 
     return new NextResponse(Buffer.from(pdfBytes), {
       headers: {

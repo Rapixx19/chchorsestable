@@ -27,11 +27,11 @@ interface InvoiceRow {
 }
 
 const statusColors: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-800',
-  sent: 'bg-blue-100 text-blue-800',
-  paid: 'bg-green-100 text-green-800',
-  overdue: 'bg-red-100 text-red-800',
-  cancelled: 'bg-gray-100 text-gray-500',
+  draft: 'bg-gray-600 text-gray-200',
+  sent: 'bg-blue-600 text-blue-100',
+  paid: 'bg-green-600 text-green-100',
+  overdue: 'bg-red-600 text-red-100',
+  cancelled: 'bg-gray-700 text-gray-400',
 };
 
 function formatCents(cents: number): string {
@@ -77,39 +77,46 @@ export default function InvoicesList({ stableId, refreshKey }: InvoicesListProps
   }, [stableId, refreshKey]);
 
   if (isLoading) {
-    return <p className="text-gray-500">Loading invoices...</p>;
+    return <p className="text-zinc-500">Loading invoices...</p>;
   }
 
   if (error) {
-    return <p className="text-red-500">{error}</p>;
+    return <p className="text-red-400">{error}</p>;
   }
 
   if (invoices.length === 0) {
-    return <p className="text-gray-500">No invoices yet.</p>;
+    return (
+      <div className="glass-card rounded-v-card p-12 text-center">
+        <p className="text-zinc-500 mb-4">No invoices yet.</p>
+        <p className="text-zinc-600 text-sm">
+          Generate invoices from your billing periods to get started.
+        </p>
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       {invoices.map((invoice) => (
         <Link
           key={invoice.id}
           href={`/invoices/${invoice.id}`}
-          className="p-3 border rounded hover:bg-gray-50"
+          className="glass-card rounded-v-card p-4 hover:border-white/20 transition-all"
         >
           <div className="flex justify-between items-center">
             <div>
-              <p className="font-medium">{invoice.clients.name}</p>
-              <p className="text-sm text-gray-600">
+              <p className="font-medium text-white">{invoice.clients.name}</p>
+              <p className="text-sm text-zinc-400">
                 Period: {invoice.billing_period_id.slice(0, 8)}...
               </p>
             </div>
             <div className="flex items-center gap-3">
               <span
-                className={`px-2 py-1 text-xs rounded ${statusColors[invoice.status] ?? 'bg-gray-100 text-gray-800'}`}
+                className={`px-2 py-1 text-xs rounded-full ${statusColors[invoice.status] ?? 'bg-gray-600 text-gray-200'}`}
               >
                 {invoice.status}
               </span>
-              <span className="font-medium">{formatCents(invoice.total_cents)}</span>
+              <span className="font-medium text-white">{formatCents(invoice.total_cents)}</span>
             </div>
           </div>
         </Link>

@@ -50,7 +50,14 @@ export default function ClientsList({ stableId, refreshKey }: ClientsListProps) 
   }
 
   if (clients.length === 0) {
-    return <p className="text-zinc-500">No clients yet.</p>;
+    return (
+      <div className="glass-card rounded-v-card p-12 text-center">
+        <p className="text-zinc-500 mb-4">No clients yet.</p>
+        <p className="text-zinc-600 text-sm">
+          Add your first client to start managing their horses and services.
+        </p>
+      </div>
+    );
   }
 
   return (

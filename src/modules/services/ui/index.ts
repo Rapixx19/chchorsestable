@@ -5,3 +5,4 @@
  */
 
 export * from './service-list';
+export * from './BulkUploadDrawer';

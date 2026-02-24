@@ -5,3 +5,4 @@
  */
 
 export * from './telegram.service';
+export * from './ownerNotification.service';

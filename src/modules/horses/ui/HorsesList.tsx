@@ -41,24 +41,31 @@ export default function HorsesList({ stableId, refreshKey }: HorsesListProps) {
   }, [stableId, refreshKey]);
 
   if (isLoading) {
-    return <p className="text-gray-500">Loading horses...</p>;
+    return <p className="text-zinc-500">Loading horses...</p>;
   }
 
   if (error) {
-    return <p className="text-red-500">{error}</p>;
+    return <p className="text-red-400">{error}</p>;
   }
 
   if (horses.length === 0) {
-    return <p className="text-gray-500">No horses yet.</p>;
+    return (
+      <div className="glass-card rounded-v-card p-12 text-center">
+        <p className="text-zinc-500 mb-4">No horses yet.</p>
+        <p className="text-zinc-600 text-sm">
+          Add your first horse to get started with assignments.
+        </p>
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       {horses.map((horse) => (
-        <div key={horse.id} className="p-3 border rounded">
-          <p className="font-medium">{horse.name}</p>
-          {horse.breed && <p className="text-sm text-gray-600">{horse.breed}</p>}
-          {horse.birth_year && <p className="text-sm text-gray-600">Born: {horse.birth_year}</p>}
+        <div key={horse.id} className="glass-card rounded-v-card p-4 hover:border-white/20 transition-all">
+          <p className="font-medium text-white">{horse.name}</p>
+          {horse.breed && <p className="text-sm text-zinc-400">{horse.breed}</p>}
+          {horse.birth_year && <p className="text-sm text-zinc-400">Born: {horse.birth_year}</p>}
         </div>
       ))}
     </div>
