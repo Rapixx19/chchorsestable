@@ -21,7 +21,7 @@ const quickActions = [
   },
   {
     label: 'Generate Invoices',
-    href: '/invoices/generate',
+    href: '/billing',
     color: 'bg-purple-600 hover:bg-purple-700',
   },
 ];
