@@ -8,6 +8,12 @@ primary_region = 'fra'
 
 [build]
 
+# Build secrets are auto-injected from fly secrets during deploy
+[build.secrets]
+NEXT_PUBLIC_SUPABASE_URL = "NEXT_PUBLIC_SUPABASE_URL"
+NEXT_PUBLIC_SUPABASE_ANON_KEY = "NEXT_PUBLIC_SUPABASE_ANON_KEY"
+
+
 [http_service]
   internal_port = 3000
   force_https = true
