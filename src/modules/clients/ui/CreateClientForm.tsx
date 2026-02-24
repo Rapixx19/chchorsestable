@@ -49,10 +49,10 @@ export default function CreateClientForm({ stableId, onSuccess }: CreateClientFo
     onSuccess?.();
   };
 
-  const inputClassName = "w-full px-4 py-2.5 bg-surface border border-zinc-700 rounded-v-card text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-stable-gold/50 transition-colors disabled:opacity-50";
+  const inputClassName = "w-full px-4 py-2.5 bg-zinc-900/50 border border-white/10 rounded-v-card text-white placeholder-zinc-500 focus:outline-none focus:border-stable-gold/50 focus:ring-1 focus:ring-stable-gold/20 transition-all disabled:opacity-50";
 
   return (
-    <form onSubmit={handleSubmit} className="glass-card rounded-v-card p-6 space-y-4">
+    <form onSubmit={handleSubmit} className="glass-card rounded-v-card p-8 space-y-4">
       <h2 className="text-lg font-semibold text-white">Add Client</h2>
 
       <input

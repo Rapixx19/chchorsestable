@@ -1,38 +1,44 @@
 @import "tailwindcss";
 
+/* Theme variables - must be at top to prevent purging */
+@theme {
+  --color-stable-gold: #D4AF37;
+  --color-stable-emerald: #10B981;
+  --color-background: #09090b;
+  --radius-v-card: 1rem;
+}
+
+/* Custom utilities - must be declared early */
+@utility glass-card {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 8px 32px 0 rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+@utility bg-surface {
+  background-color: #18181b;
+}
+
+@utility font-finance {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Root variables */
 :root {
   --background: #09090b;
   --foreground: #ededed;
 }
 
-@theme {
-  --color-stable-gold: #D4AF37;
-  --color-stable-emerald: #10B981;
-  --color-background: #09090b; /* Deep Zinc 950 */
-  --radius-v-card: 1rem; /* Softer, premium corners */
-}
-
 body {
   background: var(--background);
-  color: #e4e4e7; /* text-zinc-200 */
+  color: #e4e4e7;
   font-family: Arial, Helvetica, sans-serif;
-}
-
-@utility bg-surface {
-  background-color: #18181b; /* zinc-900 */
-}
-
-@utility glass-card {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(255, 255, 255, 0.01) 100%
-  );
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-}
-
-@utility font-finance {
-  font-variant-numeric: tabular-nums;
 }
