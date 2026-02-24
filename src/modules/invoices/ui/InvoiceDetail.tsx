@@ -90,8 +90,48 @@ export default function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
   }, [invoiceId]);
 
   useEffect(() => {
-    fetchInvoice();
-  }, [fetchInvoice]);
+    let cancelled = false;
+
+    const load = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from('invoices')
+        .select(`*, clients!inner(name, telegram_chat_id)`)
+        .eq('id', invoiceId)
+        .single();
+
+      if (cancelled) return;
+
+      if (invoiceError) {
+        setIsLoading(false);
+        setError(invoiceError.message);
+        return;
+      }
+
+      const { data: linesData, error: linesError } = await supabase
+        .from('invoice_lines')
+        .select('*')
+        .eq('invoice_id', invoiceId);
+
+      if (cancelled) return;
+
+      setIsLoading(false);
+
+      if (linesError) {
+        setError(linesError.message);
+        return;
+      }
+
+      setInvoice(invoiceData as unknown as InvoiceRow);
+      setLines((linesData as unknown as InvoiceLineRow[]) ?? []);
+    };
+
+    load();
+
+    return () => { cancelled = true; };
+  }, [invoiceId]);
 
   if (isLoading) {
     return <p className="text-gray-500">Loading invoice...</p>;
