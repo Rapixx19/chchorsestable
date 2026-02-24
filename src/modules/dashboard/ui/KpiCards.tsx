@@ -7,7 +7,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { DollarSign, Users, Rabbit, FileText } from 'lucide-react';
 import { supabase } from '@/infra/supabase/client';
+import { KpiCard } from './KpiCard';
 
 interface KpiData {
   monthlyRevenue: number;
@@ -63,57 +65,46 @@ export default function KpiCards() {
     fetchKpis();
   }, []);
 
-  const cards = [
-    {
-      label: 'Monthly Revenue',
-      value: kpis ? formatCurrency(kpis.monthlyRevenue) : '-',
-      icon: '$',
-      color: 'from-green-500 to-emerald-600',
-    },
-    {
-      label: 'Active Clients',
-      value: kpis?.activeClients ?? '-',
-      icon: 'U',
-      color: 'from-blue-500 to-indigo-600',
-    },
-    {
-      label: 'Horses',
-      value: kpis?.totalHorses ?? '-',
-      icon: 'H',
-      color: 'from-amber-500 to-orange-600',
-    },
-    {
-      label: 'Pending Invoices',
-      value: kpis?.pendingInvoices ?? '-',
-      icon: 'I',
-      color: 'from-purple-500 to-violet-600',
-    },
-  ];
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="glass-card p-6 rounded-v-card animate-pulse">
+            <div className="w-10 h-10 bg-zinc-700 rounded-lg mb-4" />
+            <div className="w-20 h-3 bg-zinc-700 rounded mb-2" />
+            <div className="w-16 h-7 bg-zinc-700 rounded" />
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-      {cards.map((card) => (
-        <div
-          key={card.label}
-          className="bg-gray-800 rounded-xl p-5 shadow-lg border border-gray-700"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-gray-400 text-sm">{card.label}</span>
-            <div
-              className={`w-8 h-8 rounded-lg bg-gradient-to-br ${card.color} flex items-center justify-center text-white text-sm font-bold`}
-            >
-              {card.icon}
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-white">
-            {isLoading ? (
-              <span className="inline-block w-16 h-7 bg-gray-700 rounded animate-pulse" />
-            ) : (
-              card.value
-            )}
-          </p>
-        </div>
-      ))}
+      <KpiCard
+        label="Monthly Revenue"
+        value={kpis ? formatCurrency(kpis.monthlyRevenue) : '-'}
+        icon={DollarSign}
+        variant="emerald"
+      />
+      <KpiCard
+        label="Active Clients"
+        value={kpis?.activeClients ?? '-'}
+        icon={Users}
+        variant="zinc"
+      />
+      <KpiCard
+        label="Horses"
+        value={kpis?.totalHorses ?? '-'}
+        icon={Rabbit}
+        variant="gold"
+      />
+      <KpiCard
+        label="Pending Invoices"
+        value={kpis?.pendingInvoices ?? '-'}
+        icon={FileText}
+        variant="zinc"
+      />
     </div>
   );
 }

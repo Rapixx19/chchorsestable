@@ -82,17 +82,18 @@ export async function approveInvoice(invoiceId: string): Promise<void> {
     throw new Error('Invoice not found');
   }
 
-  if (invoice.status !== 'draft') {
+  const invoiceData = invoice as { status: string };
+  if (invoiceData.status !== 'draft') {
     throw new Error('Invoice can only be approved from draft status');
   }
 
   // Update to approved
-  const { error: updateError } = await supabase
-    .from('invoices')
+  const { error: updateError } = await (supabase
+    .from('invoices') as ReturnType<typeof supabase.from>)
     .update({
       status: 'approved',
       approved_at: new Date().toISOString(),
-    })
+    } as Record<string, unknown>)
     .eq('id', invoiceId);
 
   if (updateError) {

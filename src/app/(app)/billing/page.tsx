@@ -59,7 +59,7 @@ export default function BillingPage() {
           .order('start_date', { ascending: false })
           .limit(10);
 
-        setPeriods(billingPeriods ?? []);
+        setPeriods((billingPeriods ?? []) as unknown as BillingPeriod[]);
       }
       setIsLoading(false);
     }

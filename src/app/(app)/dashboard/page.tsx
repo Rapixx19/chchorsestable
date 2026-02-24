@@ -8,6 +8,7 @@ import DashboardHeader from '@/modules/dashboard/ui/DashboardHeader';
 import KpiCards from '@/modules/dashboard/ui/KpiCards';
 import UpcomingInvoices from '@/modules/dashboard/ui/UpcomingInvoices';
 import QuickActions from '@/modules/dashboard/ui/QuickActions';
+import RecentActivity from '@/modules/dashboard/ui/RecentActivity';
 
 export default function DashboardPage() {
   return (
@@ -21,6 +22,10 @@ export default function DashboardPage() {
           </div>
           <div>
             <UpcomingInvoices />
+            <div className="mt-8">
+              <h2 className="text-sm font-bold text-zinc-500 uppercase tracking-widest mb-4">Recent Activity</h2>
+              <RecentActivity />
+            </div>
           </div>
         </div>
       </div>

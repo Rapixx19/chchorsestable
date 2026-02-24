@@ -9,6 +9,7 @@
 import { useEffect, useState } from 'react';
 import { clientService } from '../services/client.service';
 import type { Client } from '../domain/client.types';
+import { TelegramBadge } from './TelegramBadge';
 
 interface ClientsListProps {
   stableId: string;
@@ -56,7 +57,10 @@ export default function ClientsList({ stableId, refreshKey }: ClientsListProps) 
     <div className="flex flex-col gap-2">
       {clients.map((client) => (
         <div key={client.id} className="p-3 border rounded">
-          <p className="font-medium">{client.name}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-medium">{client.name}</p>
+            <TelegramBadge isLinked={!!client.telegram_chat_id} />
+          </div>
           {client.email && <p className="text-sm text-gray-600">{client.email}</p>}
           {client.phone && <p className="text-sm text-gray-600">{client.phone}</p>}
         </div>

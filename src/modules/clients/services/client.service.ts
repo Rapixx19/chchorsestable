@@ -35,6 +35,7 @@ function mapClient(data: Record<string, unknown>): Client {
     email: data.email as string | null,
     phone: data.phone as string | null,
     notes: data.notes as string | null,
+    telegram_chat_id: data.telegram_chat_id as string | null,
     archived: data.archived as boolean,
     created_at: new Date(data.created_at as string),
   };

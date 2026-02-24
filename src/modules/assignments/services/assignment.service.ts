@@ -61,7 +61,9 @@ function mapAssignmentWithDetails(data: Record<string, unknown>): AssignmentWith
 export interface AssignmentService {
   createAssignment(input: CreateAssignmentInput): Promise<AssignmentResult>;
   getAssignmentsByStable(stableId: string): Promise<AssignmentsResult>;
+  getAssignmentsByClient(clientId: string): Promise<AssignmentsResult>;
   setAssignmentActive(id: string, active: boolean): Promise<AssignmentResult>;
+  deleteAssignment(id: string): Promise<{ success: boolean; error?: string }>;
 }
 
 class SupabaseAssignmentService implements AssignmentService {
@@ -107,6 +109,25 @@ class SupabaseAssignmentService implements AssignmentService {
     return { success: true, assignments: data.map(mapAssignmentWithDetails) };
   }
 
+  async getAssignmentsByClient(clientId: string): Promise<AssignmentsResult> {
+    const { data, error } = await supabase
+      .from('service_assignments')
+      .select(`
+        *,
+        clients(name),
+        horses(name),
+        services(name, price_cents, billing_unit)
+      `)
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, assignments: data.map(mapAssignmentWithDetails) };
+  }
+
   async setAssignmentActive(id: string, active: boolean): Promise<AssignmentResult> {
     const { data, error } = await supabase
       .from('service_assignments')
@@ -120,6 +141,20 @@ class SupabaseAssignmentService implements AssignmentService {
     }
 
     return { success: true, assignment: mapAssignment(data) };
+  }
+
+  async deleteAssignment(id: string): Promise<{ success: boolean; error?: string }> {
+    // Soft delete: deactivate the assignment
+    const { error } = await supabase
+      .from('service_assignments')
+      .update({ active: false })
+      .eq('id', id);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
   }
 }
 

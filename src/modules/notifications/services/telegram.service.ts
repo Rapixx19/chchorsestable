@@ -22,7 +22,7 @@ export async function sendTelegramDocument(
   formData.append('chat_id', input.chatId);
   formData.append(
     'document',
-    new Blob([input.document], { type: 'application/pdf' }),
+    new Blob([input.document as unknown as BlobPart], { type: 'application/pdf' }),
     input.filename
   );
   if (input.caption) {

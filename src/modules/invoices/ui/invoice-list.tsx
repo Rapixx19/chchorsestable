@@ -16,6 +16,7 @@ interface InvoiceListProps {
 
 const statusColors: Record<Invoice['status'], string> = {
   draft: 'gray',
+  approved: 'yellow',
   sent: 'blue',
   paid: 'green',
   overdue: 'red',

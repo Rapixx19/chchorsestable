@@ -6,9 +6,10 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/infra/supabase/client';
+import DispatchControls from './DispatchControls';
 
 interface InvoiceDetailProps {
   invoiceId: string;
@@ -55,65 +56,8 @@ export default function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
   const [lines, setLines] = useState<InvoiceLineRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [isApproving, setIsApproving] = useState(false);
-  const [isSendingTelegram, setIsSendingTelegram] = useState(false);
 
-  async function handleDownloadPdf() {
-    setIsDownloading(true);
-    try {
-      const response = await fetch(`/api/invoices/${invoiceId}/pdf`);
-      if (!response.ok) throw new Error('Download failed');
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `invoice-${invoiceId}.pdf`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    } finally {
-      setIsDownloading(false);
-    }
-  }
-
-  async function handleApprove() {
-    setIsApproving(true);
-    try {
-      const response = await fetch(`/api/invoices/${invoiceId}/approve`, {
-        method: 'POST',
-      });
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Approval failed');
-      }
-      window.location.reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Approval failed');
-    } finally {
-      setIsApproving(false);
-    }
-  }
-
-  async function handleSendTelegram() {
-    setIsSendingTelegram(true);
-    try {
-      const response = await fetch(`/api/invoices/${invoiceId}/send-telegram`, {
-        method: 'POST',
-      });
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to send via Telegram');
-      }
-      window.location.reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send via Telegram');
-    } finally {
-      setIsSendingTelegram(false);
-    }
-  }
-
-  useEffect(() => {
-    async function fetchInvoice() {
+  const fetchInvoice = useCallback(async () => {
       setIsLoading(true);
       setError(null);
 
@@ -142,11 +86,12 @@ export default function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
       }
 
       setInvoice(invoiceData as unknown as InvoiceRow);
-      setLines((linesData as InvoiceLineRow[]) ?? []);
-    }
-
-    fetchInvoice();
+      setLines((linesData as unknown as InvoiceLineRow[]) ?? []);
   }, [invoiceId]);
+
+  useEffect(() => {
+    fetchInvoice();
+  }, [fetchInvoice]);
 
   if (isLoading) {
     return <p className="text-gray-500">Loading invoice...</p>;
@@ -175,38 +120,19 @@ export default function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
             Created: {new Date(invoice.created_at).toLocaleDateString()}
           </p>
         </div>
-        <div className="text-right">
+        <div className="text-right flex flex-col items-end gap-2">
           <span
             className={`px-2 py-1 text-xs rounded ${statusColors[invoice.status] ?? 'bg-gray-100 text-gray-800'}`}
           >
             {invoice.status}
           </span>
-          <p className="text-2xl font-bold mt-2">{formatCents(invoice.total_cents)}</p>
-          <button
-            onClick={handleDownloadPdf}
-            disabled={isDownloading}
-            className="mt-2 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-          >
-            {isDownloading ? 'Downloading...' : 'Download PDF'}
-          </button>
-          {invoice.status === 'draft' && (
-            <button
-              onClick={handleApprove}
-              disabled={isApproving}
-              className="mt-2 ml-2 px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
-            >
-              {isApproving ? 'Approving...' : 'Approve Invoice'}
-            </button>
-          )}
-          {invoice.status === 'approved' && invoice.clients.telegram_chat_id && (
-            <button
-              onClick={handleSendTelegram}
-              disabled={isSendingTelegram}
-              className="mt-2 ml-2 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-            >
-              {isSendingTelegram ? 'Sending...' : 'Send via Telegram'}
-            </button>
-          )}
+          <p className="text-2xl font-bold">{formatCents(invoice.total_cents)}</p>
+          <DispatchControls
+            invoiceId={invoiceId}
+            status={invoice.status as 'draft' | 'approved' | 'sent' | 'paid' | 'overdue' | 'cancelled'}
+            isLinked={!!invoice.clients.telegram_chat_id}
+            onStatusChange={fetchInvoice}
+          />
         </div>
       </div>
 
