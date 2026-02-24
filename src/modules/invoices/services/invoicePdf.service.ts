@@ -4,7 +4,7 @@
  * @safety RED
  */
 
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, StandardFonts, rgb, PDFImage } from 'pdf-lib';
 import { createClient } from '@/infra/supabase/server';
 
 interface InvoiceWithJoins {
@@ -17,7 +17,14 @@ interface InvoiceWithJoins {
   status: string;
   created_at: string;
   clients: { name: string };
-  stables: { name: string };
+  stables: {
+    name: string;
+    logo_url?: string;
+    bank_name?: string;
+    account_number?: string;
+    iban?: string;
+    invoice_default_terms?: string;
+  };
 }
 
 interface InvoiceLine {
@@ -41,7 +48,7 @@ export async function generateInvoicePdf(invoiceId: string): Promise<Uint8Array>
     .select(`
       *,
       clients!inner(name),
-      stables!inner(name)
+      stables!inner(name, logo_url, bank_name, account_number, iban, invoice_default_terms)
     `)
     .eq('id', invoiceId)
     .single();
@@ -61,7 +68,7 @@ export async function generateInvoicePdf(invoiceId: string): Promise<Uint8Array>
     throw new Error(linesError.message);
   }
 
-  const typedLines = (lines ?? []) as InvoiceLine[];
+  const typedLines = (lines ?? []) as unknown as InvoiceLine[];
 
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595, 842]); // A4 size
@@ -70,18 +77,104 @@ export async function generateInvoicePdf(invoiceId: string): Promise<Uint8Array>
 
   const { height } = page.getSize();
   const margin = 50;
+  const pageWidth = 545;
   let y = height - margin;
 
-  // Header: Stable name
-  page.drawText(typedInvoice.stables.name, {
-    x: margin,
+  // Load logo if available
+  let logoImage: PDFImage | null = null;
+  if (typedInvoice.stables.logo_url) {
+    try {
+      const response = await fetch(typedInvoice.stables.logo_url);
+      if (response.ok) {
+        const imageBuffer = await response.arrayBuffer();
+        if (typedInvoice.stables.logo_url.toLowerCase().endsWith('.png')) {
+          logoImage = await pdfDoc.embedPng(imageBuffer);
+        } else {
+          logoImage = await pdfDoc.embedJpg(imageBuffer);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to load logo, continuing without it:', err);
+    }
+  }
+
+  // Header: Logo (left) + Stable name & bank details (right)
+  const logoSize = 60;
+  if (logoImage) {
+    const logoDims = logoImage.scale(logoSize / Math.max(logoImage.width, logoImage.height));
+    page.drawImage(logoImage, {
+      x: margin,
+      y: y - logoDims.height,
+      width: logoDims.width,
+      height: logoDims.height,
+    });
+  }
+
+  // Stable name (right-aligned)
+  const stableName = typedInvoice.stables.name;
+  const stableNameWidth = fontBold.widthOfTextAtSize(stableName, 16);
+  page.drawText(stableName, {
+    x: pageWidth - stableNameWidth,
     y,
-    size: 20,
+    size: 16,
     font: fontBold,
     color: rgb(0, 0, 0),
   });
+
+  // Bank details (right-aligned, below stable name)
+  let bankY = y - 16;
+  const bankColor = rgb(0.4, 0.4, 0.4);
+  const bankSize = 10;
+
+  if (typedInvoice.stables.bank_name) {
+    const bankText = `Bank: ${typedInvoice.stables.bank_name}`;
+    const bankTextWidth = font.widthOfTextAtSize(bankText, bankSize);
+    page.drawText(bankText, {
+      x: pageWidth - bankTextWidth,
+      y: bankY,
+      size: bankSize,
+      font,
+      color: bankColor,
+    });
+    bankY -= 12;
+  }
+
+  if (typedInvoice.stables.account_number) {
+    const accountText = `Account: ${typedInvoice.stables.account_number}`;
+    const accountTextWidth = font.widthOfTextAtSize(accountText, bankSize);
+    page.drawText(accountText, {
+      x: pageWidth - accountTextWidth,
+      y: bankY,
+      size: bankSize,
+      font,
+      color: bankColor,
+    });
+    bankY -= 12;
+  }
+
+  if (typedInvoice.stables.iban) {
+    const ibanText = `IBAN: ${typedInvoice.stables.iban}`;
+    const ibanTextWidth = font.widthOfTextAtSize(ibanText, bankSize);
+    page.drawText(ibanText, {
+      x: pageWidth - ibanTextWidth,
+      y: bankY,
+      size: bankSize,
+      font,
+      color: bankColor,
+    });
+  }
+
+  // Gold divider line below header
+  y -= logoSize + 10;
+  page.drawLine({
+    start: { x: margin, y },
+    end: { x: pageWidth, y },
+    thickness: 2,
+    color: rgb(0.831, 0.686, 0.216), // #D4AF37 gold
+  });
   y -= 25;
 
+  // Invoice label
   page.drawText('Invoice', {
     x: margin,
     y,
@@ -89,7 +182,7 @@ export async function generateInvoicePdf(invoiceId: string): Promise<Uint8Array>
     font,
     color: rgb(0.3, 0.3, 0.3),
   });
-  y -= 40;
+  y -= 30;
 
   // Client info
   page.drawText(`Client: ${typedInvoice.clients.name}`, {
@@ -179,6 +272,52 @@ export async function generateInvoicePdf(invoiceId: string): Promise<Uint8Array>
   // Total
   page.drawText('Total:', { x: colX.unitPrice, y, size: 12, font: fontBold });
   page.drawText(formatCents(typedInvoice.total_cents), { x: colX.total, y, size: 12, font: fontBold });
+
+  // Footer: Terms & Conditions
+  if (typedInvoice.stables.invoice_default_terms) {
+    const termsY = 80;
+    const termsColor = rgb(0.5, 0.5, 0.5);
+    const termsSize = 9;
+    const maxLineWidth = pageWidth - margin;
+
+    page.drawText('Terms & Conditions', {
+      x: margin,
+      y: termsY,
+      size: termsSize,
+      font: fontBold,
+      color: termsColor,
+    });
+
+    // Word-wrap terms text
+    const terms = typedInvoice.stables.invoice_default_terms;
+    const words = terms.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+
+    for (const word of words) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      const testWidth = font.widthOfTextAtSize(testLine, termsSize);
+      if (testWidth <= maxLineWidth) {
+        currentLine = testLine;
+      } else {
+        if (currentLine) lines.push(currentLine);
+        currentLine = word;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+
+    let termsTextY = termsY - 12;
+    for (const line of lines.slice(0, 3)) { // Limit to 3 lines
+      page.drawText(line, {
+        x: margin,
+        y: termsTextY,
+        size: termsSize,
+        font,
+        color: termsColor,
+      });
+      termsTextY -= 11;
+    }
+  }
 
   const pdfBytes = await pdfDoc.save();
   return pdfBytes;

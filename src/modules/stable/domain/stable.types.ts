@@ -11,6 +11,9 @@ export interface Stable {
   created_at: Date;
   logo_url?: string;
   invoice_default_terms?: string;
+  bank_name?: string;
+  account_number?: string;
+  iban?: string;
 }
 
 export interface CreateStableInput {
@@ -22,4 +25,7 @@ export interface UpdateStableBrandingInput {
   name?: string;
   logo_url?: string;
   invoice_default_terms?: string;
+  bank_name?: string;
+  account_number?: string;
+  iban?: string;
 }
