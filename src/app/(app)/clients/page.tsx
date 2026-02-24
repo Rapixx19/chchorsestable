@@ -42,7 +42,7 @@ export default function ClientsPage() {
   if (isLoading) {
     return (
       <main className="p-6">
-        <p>Loading...</p>
+        <p className="text-zinc-500">Loading...</p>
       </main>
     );
   }
@@ -50,14 +50,17 @@ export default function ClientsPage() {
   if (!stableId) {
     return (
       <main className="p-6">
-        <p>No stable found.</p>
+        <p className="text-zinc-500">No stable found.</p>
       </main>
     );
   }
 
   return (
     <main className="p-6 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Clients</h1>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-white">Clients</h1>
+        <p className="text-zinc-400 text-sm mt-1">Manage your client accounts</p>
+      </div>
 
       <div className="mb-6">
         <CreateClientForm stableId={stableId} onSuccess={handleClientCreated} />

@@ -49,9 +49,11 @@ export default function CreateClientForm({ stableId, onSuccess }: CreateClientFo
     onSuccess?.();
   };
 
+  const inputClassName = "w-full px-4 py-2.5 bg-surface border border-zinc-700 rounded-v-card text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-stable-gold/50 transition-colors disabled:opacity-50";
+
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3 p-4 border rounded">
-      <h2 className="text-lg font-semibold">Add Client</h2>
+    <form onSubmit={handleSubmit} className="glass-card rounded-v-card p-6 space-y-4">
+      <h2 className="text-lg font-semibold text-white">Add Client</h2>
 
       <input
         type="text"
@@ -59,7 +61,7 @@ export default function CreateClientForm({ stableId, onSuccess }: CreateClientFo
         value={name}
         onChange={(e) => setName(e.target.value)}
         disabled={isLoading}
-        className="border rounded px-3 py-2"
+        className={inputClassName}
         required
         minLength={2}
       />
@@ -70,7 +72,7 @@ export default function CreateClientForm({ stableId, onSuccess }: CreateClientFo
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         disabled={isLoading}
-        className="border rounded px-3 py-2"
+        className={inputClassName}
       />
 
       <input
@@ -79,7 +81,7 @@ export default function CreateClientForm({ stableId, onSuccess }: CreateClientFo
         value={phone}
         onChange={(e) => setPhone(e.target.value)}
         disabled={isLoading}
-        className="border rounded px-3 py-2"
+        className={inputClassName}
       />
 
       <textarea
@@ -87,16 +89,16 @@ export default function CreateClientForm({ stableId, onSuccess }: CreateClientFo
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         disabled={isLoading}
-        className="border rounded px-3 py-2"
+        className={inputClassName}
         rows={2}
       />
 
-      {error && <p className="text-red-500 text-sm">{error}</p>}
+      {error && <p className="text-red-400 text-sm">{error}</p>}
 
       <button
         type="submit"
         disabled={isLoading}
-        className="bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:opacity-50"
+        className="w-full py-2.5 bg-stable-gold text-zinc-950 font-bold rounded-v-card hover:scale-[1.02] transition-all disabled:opacity-50"
       >
         {isLoading ? 'Creating...' : 'Add Client'}
       </button>

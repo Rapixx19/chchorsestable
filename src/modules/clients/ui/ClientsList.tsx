@@ -42,27 +42,27 @@ export default function ClientsList({ stableId, refreshKey }: ClientsListProps) 
   }, [stableId, refreshKey]);
 
   if (isLoading) {
-    return <p className="text-gray-500">Loading clients...</p>;
+    return <p className="text-zinc-500">Loading clients...</p>;
   }
 
   if (error) {
-    return <p className="text-red-500">{error}</p>;
+    return <p className="text-red-400">{error}</p>;
   }
 
   if (clients.length === 0) {
-    return <p className="text-gray-500">No clients yet.</p>;
+    return <p className="text-zinc-500">No clients yet.</p>;
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       {clients.map((client) => (
-        <div key={client.id} className="p-3 border rounded">
+        <div key={client.id} className="glass-card rounded-v-card p-4 hover:border-white/20 transition-all">
           <div className="flex items-center gap-2">
-            <p className="font-medium">{client.name}</p>
+            <p className="font-medium text-white">{client.name}</p>
             <TelegramBadge isLinked={!!client.telegram_chat_id} />
           </div>
-          {client.email && <p className="text-sm text-gray-600">{client.email}</p>}
-          {client.phone && <p className="text-sm text-gray-600">{client.phone}</p>}
+          {client.email && <p className="text-sm text-zinc-400">{client.email}</p>}
+          {client.phone && <p className="text-sm text-zinc-400">{client.phone}</p>}
         </div>
       ))}
     </div>
