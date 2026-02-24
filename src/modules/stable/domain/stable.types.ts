@@ -9,9 +9,17 @@ export interface Stable {
   name: string;
   owner_id: string;
   created_at: Date;
+  logo_url?: string;
+  invoice_default_terms?: string;
 }
 
 export interface CreateStableInput {
   name: string;
   owner_id: string;
+}
+
+export interface UpdateStableBrandingInput {
+  name?: string;
+  logo_url?: string;
+  invoice_default_terms?: string;
 }

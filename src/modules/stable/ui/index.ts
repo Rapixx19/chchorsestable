@@ -5,3 +5,4 @@
  */
 
 export { default as CreateStableForm } from './CreateStableForm';
+export { default as StableBrandSettings } from './StableBrandSettings';
