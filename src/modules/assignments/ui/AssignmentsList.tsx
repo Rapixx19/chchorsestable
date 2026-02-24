@@ -8,25 +8,12 @@
 
 import { useEffect, useState } from 'react';
 import { assignmentService } from '../services/assignment.service';
+import { AssignmentTable } from './AssignmentTable';
 import type { AssignmentWithDetails } from '../domain/assignment.types';
 
 interface AssignmentsListProps {
   stableId: string;
   refreshKey?: number;
-}
-
-const BILLING_UNIT_LABELS: Record<string, string> = {
-  one_time: 'One-time',
-  monthly: '/month',
-  per_session: '/session',
-};
-
-function formatPrice(cents: number): string {
-  return (cents / 100).toFixed(2);
-}
-
-function formatDate(date: Date): string {
-  return date.toLocaleDateString('de-CH');
 }
 
 export function AssignmentsList({ stableId, refreshKey }: AssignmentsListProps) {
@@ -64,66 +51,33 @@ export function AssignmentsList({ stableId, refreshKey }: AssignmentsListProps) 
   };
 
   if (isLoading) {
-    return <p className="text-gray-500">Loading assignments...</p>;
+    return (
+      <div className="glass-card rounded-v-card p-8">
+        <p className="text-zinc-500 text-sm">Loading assignments...</p>
+      </div>
+    );
   }
 
   if (error) {
-    return <p className="text-red-500">{error}</p>;
+    return (
+      <div className="glass-card rounded-v-card p-8">
+        <p className="text-red-400 text-sm">{error}</p>
+      </div>
+    );
   }
 
   if (assignments.length === 0) {
-    return <p className="text-gray-500">No assignments yet.</p>;
+    return (
+      <div className="glass-card rounded-v-card p-8">
+        <p className="text-zinc-500 text-sm">No assignments yet.</p>
+      </div>
+    );
   }
 
   return (
-    <ul className="flex flex-col gap-2">
-      {assignments.map((assignment) => (
-        <li
-          key={assignment.id}
-          className={`p-3 border rounded ${assignment.active ? 'bg-white' : 'bg-gray-100 opacity-75'}`}
-        >
-          <div className="flex justify-between items-start">
-            <div>
-              <div className="font-medium">
-                {assignment.service_name}
-                {assignment.quantity > 1 && ` x${assignment.quantity}`}
-              </div>
-              <div className="text-sm text-gray-600">
-                {assignment.client_name}
-                {assignment.horse_name && ` - ${assignment.horse_name}`}
-              </div>
-              <div className="text-sm text-gray-500">
-                {formatDate(assignment.start_date)}
-                {assignment.end_date && ` - ${formatDate(assignment.end_date)}`}
-              </div>
-              {assignment.service_price_cents !== undefined && (
-                <div className="text-sm text-gray-500">
-                  CHF {formatPrice(assignment.service_price_cents * assignment.quantity)}
-                  {assignment.service_billing_unit !== 'one_time' &&
-                    ` ${BILLING_UNIT_LABELS[assignment.service_billing_unit || 'one_time']}`}
-                </div>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {!assignment.active && (
-                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">
-                  Inactive
-                </span>
-              )}
-              <button
-                onClick={() => handleToggleActive(assignment.id, !assignment.active)}
-                className={`text-sm px-3 py-1 rounded ${
-                  assignment.active
-                    ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    : 'bg-green-500 text-white hover:bg-green-600'
-                }`}
-              >
-                {assignment.active ? 'Deactivate' : 'Reactivate'}
-              </button>
-            </div>
-          </div>
-        </li>
-      ))}
-    </ul>
+    <AssignmentTable
+      assignments={assignments}
+      onToggleActive={handleToggleActive}
+    />
   );
 }

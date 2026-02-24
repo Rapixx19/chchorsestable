@@ -6,3 +6,4 @@
 
 export * from './CreateAssignmentForm';
 export * from './AssignmentsList';
+export * from './AssignmentTable';
