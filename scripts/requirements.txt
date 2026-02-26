@@ -1,0 +1,2 @@
+# PDF parsing dependencies for service import
+PyMuPDF>=1.23.0

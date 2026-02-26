@@ -1,31 +1,48 @@
 /**
  * @module imports/ui
- * @description PDF upload component for importing services
+ * @description PDF upload component for importing services using PyMuPDF
  * @safety GREEN
  */
 
 'use client';
 
 import { useState, useCallback } from 'react';
-import type { ImportJob, ParsedServicesResult } from '../domain/imports.types';
-import { pdfTextExtractService } from '../services/pdfTextExtract.service';
-import { aiParseService } from '../services/aiParse.service';
+import type { ImportJob, ParsedServicesResult, ParsedServiceCandidate } from '../domain/imports.types';
 import { importsService } from '../services/imports.service';
+import type { BillingUnit } from '@/modules/services/domain/service.types';
 
 interface ImportServicesFromPdfProps {
   stableId: string;
   onImportComplete: (job: ImportJob, result: ParsedServicesResult) => void;
 }
 
-type UploadState = 'idle' | 'uploading' | 'extracting' | 'parsing' | 'complete' | 'error';
+type UploadState = 'idle' | 'uploading' | 'parsing' | 'complete' | 'error';
 
 const MAX_FILE_SIZE_MB = 10;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
+interface PyMuPDFParseResponse {
+  success: boolean;
+  services?: Array<{
+    name: string;
+    price_cents: number;
+    billing_unit: string;
+    tax_rate: number | null;
+    duration_text: string | null;
+    notes: string | null;
+    confidence: number;
+  }>;
+  count?: number;
+  method?: string;
+  stable_id?: string;
+  error?: string;
+}
 
 export function ImportServicesFromPdf({ stableId, onImportComplete }: ImportServicesFromPdfProps) {
   const [state, setState] = useState<UploadState>('idle');
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [parseMethod, setParseMethod] = useState<string | null>(null);
 
   const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -43,6 +60,7 @@ export function ImportServicesFromPdf({ stableId, onImportComplete }: ImportServ
 
     setFileName(file.name);
     setError(null);
+    setParseMethod(null);
 
     try {
       // Step 1: Create import job record
@@ -50,7 +68,7 @@ export function ImportServicesFromPdf({ stableId, onImportComplete }: ImportServ
       const jobResult = await importsService.createJob({
         stable_id: stableId,
         type: 'service_catalog_pdf',
-        file_path: file.name, // In production, upload to storage and use URL
+        file_path: file.name,
       });
 
       if (!jobResult.success || !jobResult.job) {
@@ -59,29 +77,45 @@ export function ImportServicesFromPdf({ stableId, onImportComplete }: ImportServ
 
       const job = jobResult.job;
 
-      // Step 2: Extract text from PDF
-      setState('extracting');
-      const buffer = await file.arrayBuffer();
-      const extractResult = await pdfTextExtractService.extractText(buffer);
-
-      if (!extractResult.success || !extractResult.text) {
-        await importsService.updateJobStatus(job.id, 'failed', extractResult.error);
-        throw new Error(extractResult.error || 'PDF text extraction failed');
-      }
-
-      // Step 3: Parse services from text
+      // Step 2: Call PyMuPDF-based parsing API
       setState('parsing');
-      const parseResult = await aiParseService.parseServices(extractResult.text);
+      const formData = new FormData();
+      formData.append('file', file);
 
-      if (!parseResult.success || !parseResult.candidates) {
+      const response = await fetch('/api/services/parse-pdf', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const parseResult: PyMuPDFParseResponse = await response.json();
+
+      if (!response.ok || !parseResult.success) {
         await importsService.updateJobStatus(job.id, 'failed', parseResult.error);
-        throw new Error(parseResult.error || 'Service parsing failed');
+        throw new Error(parseResult.error || 'PDF parsing failed');
       }
+
+      if (!parseResult.services || parseResult.services.length === 0) {
+        await importsService.updateJobStatus(job.id, 'failed', 'No services found in PDF');
+        throw new Error('No services could be extracted from the PDF. The document may not contain a recognizable price list format.');
+      }
+
+      setParseMethod(parseResult.method || 'unknown');
+
+      // Step 3: Convert to ParsedServiceCandidate format
+      const candidates: ParsedServiceCandidate[] = parseResult.services.map((s) => ({
+        name: s.name,
+        price_cents: s.price_cents,
+        billing_unit: s.billing_unit as BillingUnit,
+        notes: s.notes,
+        confidence: s.confidence,
+        tax_rate: s.tax_rate,
+        duration_text: s.duration_text,
+      }));
 
       // Step 4: Save parsed result
       const parsedResult: ParsedServicesResult = {
-        candidates: parseResult.candidates,
-        raw_text: extractResult.text,
+        candidates,
+        raw_text: `PyMuPDF extraction (${parseResult.method || 'structured'})`,
         parsed_at: new Date().toISOString(),
       };
 
@@ -105,8 +139,7 @@ export function ImportServicesFromPdf({ stableId, onImportComplete }: ImportServ
   const stateMessages: Record<UploadState, string> = {
     idle: 'Select a PDF file to import services',
     uploading: 'Creating import job...',
-    extracting: 'Extracting text from PDF...',
-    parsing: 'Parsing services from text...',
+    parsing: 'Analyzing PDF with PyMuPDF...',
     complete: 'Import complete! Review the extracted services below.',
     error: 'Import failed',
   };
@@ -138,7 +171,7 @@ export function ImportServicesFromPdf({ stableId, onImportComplete }: ImportServ
                 <p className="text-xs text-gray-500">PDF files only (max {MAX_FILE_SIZE_MB}MB)</p>
               </>
             )}
-            {(state === 'uploading' || state === 'extracting' || state === 'parsing') && (
+            {(state === 'uploading' || state === 'parsing') && (
               <>
                 <svg className="animate-spin w-8 h-8 mb-2 text-blue-500" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -154,6 +187,11 @@ export function ImportServicesFromPdf({ stableId, onImportComplete }: ImportServ
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 <p className="text-sm text-green-600">{stateMessages[state]}</p>
+                {parseMethod && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Extraction method: {parseMethod}
+                  </p>
+                )}
               </>
             )}
             {state === 'error' && (
@@ -187,7 +225,7 @@ export function ImportServicesFromPdf({ stableId, onImportComplete }: ImportServ
 
       {state === 'complete' && (
         <button
-          onClick={() => { setState('idle'); setFileName(null); }}
+          onClick={() => { setState('idle'); setFileName(null); setParseMethod(null); }}
           className="text-sm text-blue-600 hover:text-blue-800 underline"
         >
           Import another file

@@ -20,33 +20,62 @@ const MAX_REASONABLE_PRICE_CENTS = 10_000_000; // 100,000 CHF/EUR/$
 
 // Currency patterns - ONLY match when explicit currency symbol is present
 // Never assume currency from bare numbers
-// Pattern explanation: matches numbers with optional thousands separators and decimals
-const PRICE_NUMBER = '\\d+(?:[.,]\\d{3})*(?:[.,]\\d{1,2})?|\\d+';
+// Pattern explanation: matches numbers with optional thousands separators (including Swiss apostrophe) and decimals
+const PRICE_NUMBER = "\\d+(?:[.,'']\\d{3})*(?:[.,]\\d{1,2})?(?:[.–—-])?|\\d+";
 
 const CURRENCY_PATTERNS = [
   // EUR patterns
   { symbol: '€', regex: new RegExp(`(${PRICE_NUMBER})\\s*€`) },
   { symbol: '€', regex: new RegExp(`€\\s*(${PRICE_NUMBER})`) },
-  // CHF patterns
+  // CHF patterns (including Swiss Fr. abbreviation and SFr.)
   { symbol: 'CHF', regex: new RegExp(`(${PRICE_NUMBER})\\s*CHF`, 'i') },
   { symbol: 'CHF', regex: new RegExp(`CHF\\s*(${PRICE_NUMBER})`, 'i') },
+  { symbol: 'CHF', regex: new RegExp(`Fr\\.?\\s*(${PRICE_NUMBER})`, 'i') },
+  { symbol: 'CHF', regex: new RegExp(`SFr\\.?\\s*(${PRICE_NUMBER})`, 'i') },
   // USD patterns
   { symbol: '$', regex: new RegExp(`\\$\\s*(${PRICE_NUMBER})`) },
   { symbol: '$', regex: new RegExp(`(${PRICE_NUMBER})\\s*\\$`) },
 ];
 
-// Billing unit patterns
+// Billing unit patterns (English, German, Italian)
 const BILLING_UNIT_PATTERNS: { pattern: RegExp; unit: BillingUnit }[] = [
-  { pattern: /\/month|per month|monthly|monat|pro monat/i, unit: 'monthly' },
-  { pattern: /\/session|per session|\/lesson|per lesson|pro stunde/i, unit: 'per_session' },
+  // Monthly patterns
+  { pattern: /\/month|per month|monthly|monat|pro monat|monatlich/i, unit: 'monthly' },
+  { pattern: /al\s*mese|mensile|per\s*mese|\/\s*mese/i, unit: 'monthly' },
+  // Per-session patterns
+  { pattern: /\/session|per session|\/lesson|per lesson|pro stunde|pro tag/i, unit: 'per_session' },
+  { pattern: /al\s*giorno|per\s*giorno|giornalier[oa]|\/\s*giorno/i, unit: 'per_session' },
+  { pattern: /per\s*ora|all'?\s*ora|\/\s*ora|lezione|per\s*lezione/i, unit: 'per_session' },
 ];
 
+// Swiss IVA tax rates
+const SWISS_TAX_RATES: Record<string, number> = {
+  '8.1': 0.081,
+  '8,1': 0.081,
+  '8.1%': 0.081,
+  '8,1%': 0.081,
+  '2.6': 0.026,
+  '2,6': 0.026,
+  '2.6%': 0.026,
+  '2,6%': 0.026,
+  '3.8': 0.038,
+  '3,8': 0.038,
+  '3.8%': 0.038,
+  '3,8%': 0.038,
+};
+
 /**
- * Normalize price string handling European (1.234,56) and US (1,234.56) formats
+ * Normalize price string handling European (1.234,56), US (1,234.56), and Swiss (1'234.56) formats
  */
 function normalizePriceString(priceStr: string): number | null {
   // Remove whitespace
-  const cleaned = priceStr.replace(/\s/g, '');
+  let cleaned = priceStr.replace(/\s/g, '');
+
+  // Remove Swiss apostrophe thousands separator (CHF 1'365.00 → 1365.00)
+  cleaned = cleaned.replace(/'/g, '');
+
+  // Handle trailing dash notation (e.g., 850.– means 850.00)
+  cleaned = cleaned.replace(/[.–—-]+$/, '');
 
   // Detect format by looking at the last separator
   const lastComma = cleaned.lastIndexOf(',');
@@ -58,7 +87,7 @@ function normalizePriceString(priceStr: string): number | null {
     // European format: 1.234,56 → comma is decimal separator
     normalized = cleaned.replace(/\./g, '').replace(',', '.');
   } else if (lastDot > lastComma) {
-    // US format: 1,234.56 → dot is decimal separator
+    // US/Swiss format: 1,234.56 or 1234.56 → dot is decimal separator
     normalized = cleaned.replace(/,/g, '');
   } else if (lastComma !== -1) {
     // Only comma present: could be 1,50 (European decimal) or 1,000 (US thousands)
@@ -85,6 +114,39 @@ function normalizePriceString(priceStr: string): number | null {
 
   const price = parseFloat(normalized);
   return isNaN(price) ? null : price;
+}
+
+/**
+ * Parse Swiss IVA tax rate from text
+ */
+function parseTaxRate(text: string): number | null {
+  for (const [rateStr, rateVal] of Object.entries(SWISS_TAX_RATES)) {
+    if (text.includes(rateStr)) {
+      return rateVal;
+    }
+  }
+  // Try extracting number pattern
+  const match = text.match(/(\d+[.,]\d+)\s*%?/);
+  if (match) {
+    const rateStr = match[1];
+    if (SWISS_TAX_RATES[rateStr]) {
+      return SWISS_TAX_RATES[rateStr];
+    }
+  }
+  return null;
+}
+
+/**
+ * Extract duration/billing text from a line
+ */
+function extractDurationText(text: string): string | null {
+  for (const { pattern } of BILLING_UNIT_PATTERNS) {
+    const match = text.match(pattern);
+    if (match) {
+      return match[0];
+    }
+  }
+  return null;
 }
 
 function parsePrice(text: string): { price: number; currency: string } | null {
@@ -177,6 +239,10 @@ export function parseServicesFromText(text: string): ParsedServiceCandidate[] {
 
     const priceCents = Math.round(parsed.price * 100);
 
+    // Extract tax rate and duration text from the line
+    const taxRate = parseTaxRate(line);
+    const durationText = extractDurationText(line);
+
     // Build notes with warnings
     let notes = `Extracted from PDF (${parsed.currency})`;
     if (priceCents > MAX_REASONABLE_PRICE_CENTS) {
@@ -189,6 +255,8 @@ export function parseServicesFromText(text: string): ParsedServiceCandidate[] {
       billing_unit: parsed.billingUnit,
       notes,
       confidence: parsed.confidence,
+      tax_rate: taxRate,
+      duration_text: durationText,
     });
   }
 

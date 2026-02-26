@@ -22,6 +22,13 @@ interface EditableCandidate extends ParsedServiceCandidate {
   _selected: boolean;
 }
 
+const TAX_RATE_OPTIONS = [
+  { value: '', label: 'None' },
+  { value: '0.081', label: '8.1%' },
+  { value: '0.026', label: '2.6%' },
+  { value: '0.038', label: '3.8%' },
+];
+
 const BILLING_UNIT_LABELS: Record<BillingUnit, string> = {
   one_time: 'One-time',
   monthly: 'Monthly',
@@ -99,6 +106,8 @@ export function ReviewImportedServices({
           billing_unit: s.billing_unit,
           notes: s.notes,
           confidence: s.confidence,
+          tax_rate: s.tax_rate,
+          duration_text: s.duration_text,
         }));
       await onSave(toSave);
     } finally {
@@ -148,6 +157,7 @@ export function ReviewImportedServices({
               </th>
               <th className="px-4 py-3 text-left font-medium text-gray-500">Name</th>
               <th className="px-4 py-3 text-left font-medium text-gray-500 w-32">Price</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-500 w-24">IVA</th>
               <th className="px-4 py-3 text-left font-medium text-gray-500 w-36">Billing</th>
               <th className="px-4 py-3 text-left font-medium text-gray-500 w-24">Confidence</th>
               <th className="px-4 py-3 text-left font-medium text-gray-500 w-20">
@@ -202,6 +212,27 @@ export function ReviewImportedServices({
                         className="w-full pl-10 pr-2 py-1 border rounded text-sm text-right disabled:bg-gray-100 disabled:text-gray-500"
                       />
                     </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <select
+                      value={service.tax_rate?.toString() ?? ''}
+                      onChange={(e) =>
+                        updateService(service._id, {
+                          tax_rate: e.target.value ? parseFloat(e.target.value) : null,
+                        })
+                      }
+                      disabled={!service._selected}
+                      className="w-full px-2 py-1 border rounded text-sm disabled:bg-gray-100 disabled:text-gray-500"
+                    >
+                      {TAX_RATE_OPTIONS.map(({ value, label }) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                    {service.duration_text && (
+                      <p className="text-xs text-gray-500 mt-1">{service.duration_text}</p>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <select

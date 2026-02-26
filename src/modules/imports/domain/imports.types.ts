@@ -32,6 +32,8 @@ export interface ParsedServiceCandidate {
   billing_unit: BillingUnit;
   notes: string | null;
   confidence: number; // 0.0 - 1.0
+  tax_rate: number | null; // 0.081 for 8.1%, 0.026 for 2.6%, etc.
+  duration_text: string | null; // Original duration text (e.g., "al mese", "pro Monat")
 }
 
 export interface ParsedServicesResult {
