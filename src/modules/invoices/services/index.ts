@@ -7,3 +7,4 @@
 export * from './invoice.service';
 export * from './invoicePdf.service';
 export * from './invoiceTelegram.service';
+export * from './invoicePreview.service';

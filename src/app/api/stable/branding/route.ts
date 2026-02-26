@@ -46,6 +46,13 @@ export async function GET(request: NextRequest) {
         name: result.stable.name,
         logo_url: result.stable.logo_url,
         invoice_default_terms: result.stable.invoice_default_terms,
+        bank_name: result.stable.bank_name,
+        account_number: result.stable.account_number,
+        iban: result.stable.iban,
+        vat_number: result.stable.vat_number,
+        swift_bic: result.stable.swift_bic,
+        address: result.stable.address,
+        branding_template_locked: result.stable.branding_template_locked,
       },
     });
   } catch (error) {
@@ -58,7 +65,18 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { stableId, name, invoice_default_terms } = body;
+    const {
+      stableId,
+      name,
+      invoice_default_terms,
+      bank_name,
+      account_number,
+      iban,
+      vat_number,
+      swift_bic,
+      address,
+      branding_template_locked,
+    } = body;
 
     if (!stableId) {
       return NextResponse.json({ error: 'stableId is required' }, { status: 400 });
@@ -67,6 +85,13 @@ export async function PUT(request: NextRequest) {
     const input: UpdateStableBrandingInput = {};
     if (name !== undefined) input.name = name;
     if (invoice_default_terms !== undefined) input.invoice_default_terms = invoice_default_terms;
+    if (bank_name !== undefined) input.bank_name = bank_name;
+    if (account_number !== undefined) input.account_number = account_number;
+    if (iban !== undefined) input.iban = iban;
+    if (vat_number !== undefined) input.vat_number = vat_number;
+    if (swift_bic !== undefined) input.swift_bic = swift_bic;
+    if (address !== undefined) input.address = address;
+    if (branding_template_locked !== undefined) input.branding_template_locked = branding_template_locked;
 
     const result = await stableService.updateStableBranding(stableId, input);
 
@@ -81,6 +106,13 @@ export async function PUT(request: NextRequest) {
         name: result.stable!.name,
         logo_url: result.stable!.logo_url,
         invoice_default_terms: result.stable!.invoice_default_terms,
+        bank_name: result.stable!.bank_name,
+        account_number: result.stable!.account_number,
+        iban: result.stable!.iban,
+        vat_number: result.stable!.vat_number,
+        swift_bic: result.stable!.swift_bic,
+        address: result.stable!.address,
+        branding_template_locked: result.stable!.branding_template_locked,
       },
     });
   } catch (error) {
@@ -166,6 +198,13 @@ export async function POST(request: NextRequest) {
         name: result.stable!.name,
         logo_url: result.stable!.logo_url,
         invoice_default_terms: result.stable!.invoice_default_terms,
+        bank_name: result.stable!.bank_name,
+        account_number: result.stable!.account_number,
+        iban: result.stable!.iban,
+        vat_number: result.stable!.vat_number,
+        swift_bic: result.stable!.swift_bic,
+        address: result.stable!.address,
+        branding_template_locked: result.stable!.branding_template_locked,
       },
     });
   } catch (error) {

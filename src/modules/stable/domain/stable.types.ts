@@ -15,6 +15,10 @@ export interface Stable {
   account_number?: string;
   iban?: string;
   owner_telegram_chat_id?: string;
+  vat_number?: string;
+  swift_bic?: string;
+  address?: string;
+  branding_template_locked?: boolean;
 }
 
 export interface CreateStableInput {
@@ -29,4 +33,8 @@ export interface UpdateStableBrandingInput {
   bank_name?: string;
   account_number?: string;
   iban?: string;
+  vat_number?: string;
+  swift_bic?: string;
+  address?: string;
+  branding_template_locked?: boolean;
 }

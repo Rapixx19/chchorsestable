@@ -106,6 +106,14 @@ class SupabaseStableService implements StableService {
       created_at: new Date(row.created_at as string),
       logo_url: row.logo_url as string | undefined,
       invoice_default_terms: row.invoice_default_terms as string | undefined,
+      bank_name: row.bank_name as string | undefined,
+      account_number: row.account_number as string | undefined,
+      iban: row.iban as string | undefined,
+      owner_telegram_chat_id: row.owner_telegram_chat_id as string | undefined,
+      vat_number: row.vat_number as string | undefined,
+      swift_bic: row.swift_bic as string | undefined,
+      address: row.address as string | undefined,
+      branding_template_locked: row.branding_template_locked as boolean | undefined,
     };
   }
 }

@@ -16,13 +16,16 @@ interface InvoiceWithJoins {
   total_cents: number;
   status: string;
   created_at: string;
-  clients: { name: string };
+  clients: { name: string; address?: string };
   stables: {
     name: string;
     logo_url?: string;
     bank_name?: string;
     account_number?: string;
     iban?: string;
+    swift_bic?: string;
+    vat_number?: string;
+    address?: string;
     invoice_default_terms?: string;
   };
 }
@@ -36,8 +39,11 @@ interface InvoiceLine {
   line_total_cents: number;
 }
 
-function formatCents(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
+function formatSwissCents(cents: number): string {
+  const value = cents / 100;
+  const parts = value.toFixed(2).split('.');
+  const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+  return `CHF ${integerPart}.${parts[1]}`;
 }
 
 function truncateText(text: string, font: PDFFont, size: number, maxWidth: number): string {
@@ -60,8 +66,8 @@ export async function generateInvoicePdf(invoiceId: string): Promise<Uint8Array>
     .from('invoices')
     .select(`
       *,
-      clients!inner(name),
-      stables!inner(name, logo_url, bank_name, account_number, iban, invoice_default_terms)
+      clients!inner(name, address),
+      stables!inner(name, logo_url, bank_name, account_number, iban, swift_bic, vat_number, address, invoice_default_terms)
     `)
     .eq('id', invoiceId)
     .single();
@@ -135,8 +141,44 @@ export async function generateInvoicePdf(invoiceId: string): Promise<Uint8Array>
     color: rgb(0, 0, 0),
   });
 
-  // Bank details (right-aligned, below stable name, with truncation)
-  let bankY = y - 16;
+  // Address and details (right-aligned, below stable name)
+  let detailY = y - 16;
+  const detailColor = rgb(0.4, 0.4, 0.4);
+  const detailSize = 10;
+
+  // Stable address (if available)
+  if (typedInvoice.stables.address) {
+    const addressLines = typedInvoice.stables.address.split('\n');
+    for (const addressLine of addressLines.slice(0, 3)) {
+      const addrText = truncateText(addressLine.trim(), font, detailSize, maxHeaderWidth);
+      const addrTextWidth = font.widthOfTextAtSize(addrText, detailSize);
+      page.drawText(addrText, {
+        x: pageWidth - addrTextWidth,
+        y: detailY,
+        size: detailSize,
+        font,
+        color: detailColor,
+      });
+      detailY -= 12;
+    }
+  }
+
+  // VAT number (if available)
+  if (typedInvoice.stables.vat_number) {
+    const vatText = truncateText(`VAT: ${typedInvoice.stables.vat_number}`, font, detailSize, maxHeaderWidth);
+    const vatTextWidth = font.widthOfTextAtSize(vatText, detailSize);
+    page.drawText(vatText, {
+      x: pageWidth - vatTextWidth,
+      y: detailY,
+      size: detailSize,
+      font,
+      color: detailColor,
+    });
+    detailY -= 12;
+  }
+
+  // Bank details (right-aligned, below address/VAT)
+  let bankY = detailY;
   const bankColor = rgb(0.4, 0.4, 0.4);
   const bankSize = 10;
 
@@ -171,6 +213,19 @@ export async function generateInvoicePdf(invoiceId: string): Promise<Uint8Array>
     const ibanTextWidth = font.widthOfTextAtSize(ibanText, bankSize);
     page.drawText(ibanText, {
       x: pageWidth - ibanTextWidth,
+      y: bankY,
+      size: bankSize,
+      font,
+      color: bankColor,
+    });
+    bankY -= 12;
+  }
+
+  if (typedInvoice.stables.swift_bic) {
+    const swiftText = truncateText(`Swift/BIC: ${typedInvoice.stables.swift_bic}`, font, bankSize, maxHeaderWidth);
+    const swiftTextWidth = font.widthOfTextAtSize(swiftText, bankSize);
+    page.drawText(swiftText, {
+      x: pageWidth - swiftTextWidth,
       y: bankY,
       size: bankSize,
       font,
@@ -259,8 +314,8 @@ export async function generateInvoicePdf(invoiceId: string): Promise<Uint8Array>
 
     page.drawText(description, { x: colX.description, y, size: 10, font });
     page.drawText(String(line.quantity), { x: colX.qty, y, size: 10, font });
-    page.drawText(formatCents(line.unit_price_cents), { x: colX.unitPrice, y, size: 10, font });
-    page.drawText(formatCents(line.line_total_cents), { x: colX.total, y, size: 10, font });
+    page.drawText(formatSwissCents(line.unit_price_cents), { x: colX.unitPrice, y, size: 10, font });
+    page.drawText(formatSwissCents(line.line_total_cents), { x: colX.total, y, size: 10, font });
     y -= 18;
 
     if (y < 100) {
@@ -280,12 +335,12 @@ export async function generateInvoicePdf(invoiceId: string): Promise<Uint8Array>
 
   // Subtotal
   page.drawText('Subtotal:', { x: colX.unitPrice, y, size: 11, font });
-  page.drawText(formatCents(typedInvoice.subtotal_cents), { x: colX.total, y, size: 11, font });
+  page.drawText(formatSwissCents(typedInvoice.subtotal_cents), { x: colX.total, y, size: 11, font });
   y -= 18;
 
   // Total
   page.drawText('Total:', { x: colX.unitPrice, y, size: 12, font: fontBold });
-  page.drawText(formatCents(typedInvoice.total_cents), { x: colX.total, y, size: 12, font: fontBold });
+  page.drawText(formatSwissCents(typedInvoice.total_cents), { x: colX.total, y, size: 12, font: fontBold });
 
   // Footer: Terms & Conditions
   if (typedInvoice.stables.invoice_default_terms) {

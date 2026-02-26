@@ -6,24 +6,73 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
-import { Camera, Loader2, Save } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Camera, Loader2, Save, Lock, Unlock } from 'lucide-react';
 
 export default function StableSettingsPage() {
+  // Stable ID
+  const [stableId, setStableId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
   // Branding fields
   const [stableName, setStableName] = useState('');
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [stableAddress, setStableAddress] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Invoice defaults fields
   const [bankName, setBankName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [iban, setIban] = useState('');
+  const [swiftBic, setSwiftBic] = useState('');
+  const [vatNumber, setVatNumber] = useState('');
   const [termsAndConditions, setTermsAndConditions] = useState('');
+  const [templateLocked, setTemplateLocked] = useState(false);
 
   // UI states
   const [isSaving, setIsSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Fetch stable data on mount
+  const fetchStableData = useCallback(async () => {
+    try {
+      // First get the current user's stable
+      const userResponse = await fetch('/api/auth/me');
+      if (!userResponse.ok) return;
+      const userData = await userResponse.json();
+      const id = userData.stable_id;
+      if (!id) return;
+
+      setStableId(id);
+
+      // Fetch branding data
+      const response = await fetch(`/api/stable/branding?stableId=${id}`);
+      if (!response.ok) return;
+
+      const data = await response.json();
+      if (data.stable) {
+        setStableName(data.stable.name || '');
+        setLogoPreview(data.stable.logo_url || null);
+        setTermsAndConditions(data.stable.invoice_default_terms || '');
+        setBankName(data.stable.bank_name || '');
+        setAccountNumber(data.stable.account_number || '');
+        setIban(data.stable.iban || '');
+        setVatNumber(data.stable.vat_number || '');
+        setSwiftBic(data.stable.swift_bic || '');
+        setStableAddress(data.stable.address || '');
+        setTemplateLocked(data.stable.branding_template_locked || false);
+      }
+    } catch {
+      // Failed to fetch stable data
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStableData();
+  }, [fetchStableData]);
 
   const handleLogoClick = () => {
     fileInputRef.current?.click();
@@ -44,18 +93,56 @@ export default function StableSettingsPage() {
   };
 
   const handleSave = async () => {
+    if (!stableId) return;
+
     setIsSaving(true);
     setSuccessMessage(null);
+    setErrorMessage(null);
 
-    // Mock save action
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const response = await fetch('/api/stable/branding', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stableId,
+          name: stableName,
+          invoice_default_terms: termsAndConditions,
+          bank_name: bankName,
+          account_number: accountNumber,
+          iban,
+          vat_number: vatNumber,
+          swift_bic: swiftBic,
+          address: stableAddress,
+          branding_template_locked: templateLocked,
+        }),
+      });
 
-    setIsSaving(false);
-    setSuccessMessage('Settings saved successfully');
+      const data = await response.json();
 
-    // Clear success message after 3 seconds
-    setTimeout(() => setSuccessMessage(null), 3000);
+      if (!response.ok) {
+        setErrorMessage(data.error || 'Failed to save settings');
+        return;
+      }
+
+      setSuccessMessage('Settings saved successfully');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch {
+      setErrorMessage('Failed to save settings. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold text-zinc-100">Stable Settings</h1>
+          <p className="text-zinc-400 mt-1">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -131,6 +218,45 @@ export default function StableSettingsPage() {
               JPG, PNG or WebP. Max 2MB.
             </p>
           </div>
+
+          {/* Business Address */}
+          <div>
+            <label
+              htmlFor="stable-address"
+              className="block text-sm font-medium text-zinc-400 mb-2"
+            >
+              Business Address
+            </label>
+            <textarea
+              id="stable-address"
+              value={stableAddress}
+              onChange={(e) => setStableAddress(e.target.value)}
+              placeholder="Your business address for invoices"
+              rows={3}
+              className="w-full px-4 py-2.5 bg-surface border border-zinc-700 rounded-v-card text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-stable-gold/50 transition-colors resize-none"
+            />
+          </div>
+
+          {/* VAT Number */}
+          <div>
+            <label
+              htmlFor="vat-number"
+              className="block text-sm font-medium text-zinc-400 mb-2"
+            >
+              VAT Number
+            </label>
+            <input
+              id="vat-number"
+              type="text"
+              value={vatNumber}
+              onChange={(e) => setVatNumber(e.target.value)}
+              placeholder="CHE-xxx.xxx.xxx"
+              className="w-full px-4 py-2.5 bg-surface border border-zinc-700 rounded-v-card text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-stable-gold/50 transition-colors"
+            />
+            <p className="text-xs text-zinc-500 mt-1">
+              Swiss VAT format: CHE-xxx.xxx.xxx
+            </p>
+          </div>
         </div>
 
         {/* Column 2: Invoice Defaults */}
@@ -193,6 +319,24 @@ export default function StableSettingsPage() {
             />
           </div>
 
+          {/* Swift/BIC */}
+          <div>
+            <label
+              htmlFor="swift-bic"
+              className="block text-sm font-medium text-zinc-400 mb-2"
+            >
+              Swift/BIC
+            </label>
+            <input
+              id="swift-bic"
+              type="text"
+              value={swiftBic}
+              onChange={(e) => setSwiftBic(e.target.value)}
+              placeholder="Enter Swift/BIC code"
+              className="w-full px-4 py-2.5 bg-surface border border-zinc-700 rounded-v-card text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-stable-gold/50 transition-colors"
+            />
+          </div>
+
           {/* Terms & Conditions */}
           <div>
             <label
@@ -213,6 +357,35 @@ export default function StableSettingsPage() {
               These terms will appear at the bottom of your invoices.
             </p>
           </div>
+
+          {/* Template Lock Toggle */}
+          <div className="pt-2 border-t border-zinc-700/50">
+            <button
+              type="button"
+              onClick={() => setTemplateLocked(!templateLocked)}
+              className={`flex items-center gap-3 w-full px-4 py-3 rounded-v-card border transition-all ${
+                templateLocked
+                  ? 'border-stable-gold/50 bg-stable-gold/10'
+                  : 'border-zinc-700 bg-surface hover:border-zinc-600'
+              }`}
+            >
+              {templateLocked ? (
+                <Lock className="w-5 h-5 text-stable-gold" />
+              ) : (
+                <Unlock className="w-5 h-5 text-zinc-500" />
+              )}
+              <div className="text-left">
+                <p className="text-sm font-medium text-zinc-100">
+                  Lock Invoice Template
+                </p>
+                <p className="text-xs text-zinc-500">
+                  {templateLocked
+                    ? 'Invoice preview is skipped - invoices generate directly'
+                    : 'Preview invoices before generating'}
+                </p>
+              </div>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -223,10 +396,17 @@ export default function StableSettingsPage() {
         </div>
       )}
 
+      {/* Error Message */}
+      {errorMessage && (
+        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-v-card text-red-400 text-sm">
+          {errorMessage}
+        </div>
+      )}
+
       {/* Save Button */}
       <button
         onClick={handleSave}
-        disabled={isSaving}
+        disabled={isSaving || !stableId}
         className="flex items-center justify-center gap-2 w-full lg:w-auto lg:px-8 py-3 bg-stable-gold text-black font-semibold rounded-v-card hover:bg-stable-gold/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
       >
         {isSaving ? (
