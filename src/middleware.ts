@@ -8,12 +8,12 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const publicRoutes = ["/", "/login"];
+const publicRoutes = ["/"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow public routes without any checks
+  // Allow fully public routes without any checks
   if (publicRoutes.includes(pathname)) {
     return NextResponse.next();
   }
@@ -51,6 +51,14 @@ export async function middleware(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
+    // Handle /login: redirect authenticated users to dashboard
+    if (pathname === "/login") {
+      if (user) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+      return response;
+    }
+
     if (!user) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
@@ -80,5 +88,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/clients/:path*", "/horses/:path*", "/services/:path*", "/assignments/:path*", "/settings/:path*", "/onboarding"],
+  matcher: ["/login", "/dashboard/:path*", "/clients/:path*", "/horses/:path*", "/services/:path*", "/assignments/:path*", "/settings/:path*", "/onboarding"],
 };
