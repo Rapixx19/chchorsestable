@@ -8,7 +8,7 @@ import { Bot, session, webhookCallback } from 'grammy';
 import type { BotContext, SessionData } from '../domain/bot.types';
 import { createInitialSessionData } from '../domain/bot.types';
 import { stableContextMiddleware } from '../middleware/stable-context';
-import { mainMenu } from '../menus';
+import { mainMenu, handleAddServiceInput } from '../menus';
 import { registerCommands } from '../handlers/commands';
 import { handleError } from '../handlers/errors';
 
@@ -49,6 +49,21 @@ function createBot(): Bot<BotContext> {
       parse_mode: 'Markdown',
       reply_markup: mainMenu,
     });
+  });
+
+  // Handle text input for Add Service flow
+  newBot.on('message:text', async (ctx, next) => {
+    // Skip if message starts with / (command)
+    if (ctx.message.text.startsWith('/')) {
+      return next();
+    }
+
+    // Check if we're in an Add Service flow
+    const handled = await handleAddServiceInput(ctx);
+    if (!handled) {
+      // Not in a flow, continue to next handler
+      return next();
+    }
   });
 
   // Error handling

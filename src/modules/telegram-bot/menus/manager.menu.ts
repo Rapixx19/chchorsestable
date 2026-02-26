@@ -1,29 +1,50 @@
 /**
  * @module telegram-bot/menus
- * @description Root menu with main navigation options
+ * @description Manager menu for stable owners
  * @safety YELLOW
  */
 
 import { Menu } from '@grammyjs/menu';
 import type { BotContext } from '../domain/bot.types';
-import { getServiceClient } from '../middleware/stable-context';
-import { managerMenu } from './manager.menu';
+import { showProfile } from '../handlers/profile';
+import { showInvoices } from '../handlers/invoices';
+import { addServiceMenu, startAddServiceFlow } from './add-service.menu';
+import { clientsMenu } from './clients.menu';
 
-export const mainMenu = new Menu<BotContext>('root')
-  .dynamic((ctx, range) => {
-    // Show manager menu for stable owners
-    if (ctx.session.is_owner) {
-      range.submenu('🏠 Manager Dashboard', 'manager').row();
-    }
-    range.text('📊 Monthly Summary', async (ctx) => {
-      await showMonthlySummary(ctx);
-    }).row();
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://chc.app';
+
+export const managerMenu = new Menu<BotContext>('manager')
+  .text('👤 My Profile', async (ctx) => {
+    await showProfile(ctx);
+  })
+  .row()
+  .text('➕ Add Service', async (ctx) => {
+    startAddServiceFlow(ctx);
+    await ctx.answerCallbackQuery('📝 Enter service name');
+    await ctx.reply(
+      '➕ *Add New Service*\n\n' +
+      '📝 Enter the service name:',
+      { parse_mode: 'Markdown' }
+    );
+  })
+  .text('📋 Invoices', async (ctx) => {
+    await showInvoices(ctx);
+  })
+  .row()
+  .url('🌐 Open Dashboard', APP_URL + '/dashboard')
+  .row()
+  .submenu('👥 Manage Clients', 'clients')
+  .row()
+  .text('📊 Monthly Summary', async (ctx) => {
+    await showMonthlySummary(ctx);
   });
 
-// Register manager menu (which includes clients menu as child)
-mainMenu.register(managerMenu);
+// Register child menus
+managerMenu.register(addServiceMenu);
+managerMenu.register(clientsMenu);
 
 async function showMonthlySummary(ctx: BotContext): Promise<void> {
+  const { getServiceClient } = await import('../middleware/stable-context');
   const stableId = ctx.session.stable_id;
 
   if (!stableId) {

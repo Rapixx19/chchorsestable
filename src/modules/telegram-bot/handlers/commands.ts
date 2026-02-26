@@ -1,11 +1,13 @@
 /**
  * @module telegram-bot/handlers
- * @description Command handlers for /start, /link, /unlink, /manager, /menu, /help
+ * @description Command handlers for /start, /link, /unlink, /manager, /menu, /help, /profile, /services
  * @safety YELLOW
  */
 
 import type { BotContext } from '../domain/bot.types';
 import { getServiceClient } from '../middleware/stable-context';
+import { showProfile } from './profile';
+import { showInvoices } from './invoices';
 
 export function registerCommands(
   bot: { command: (cmd: string, handler: (ctx: BotContext) => Promise<void>) => void }
@@ -15,6 +17,8 @@ export function registerCommands(
   bot.command('unlink', handleUnlink);
   bot.command('manager', handleManager);
   bot.command('help', handleHelp);
+  bot.command('profile', handleProfile);
+  bot.command('services', handleServices);
   // Note: /menu is handled in bot.service.ts with menu attached
 }
 
@@ -194,11 +198,14 @@ async function handleHelp(ctx: BotContext): Promise<void> {
     await ctx.reply(
       '🐴 *CHC Bot Help - Manager Mode*\n\n' +
       '*Commands:*\n' +
-      baseCommands + '\n\n' +
+      baseCommands + '\n' +
+      '/profile - View stable settings\n' +
+      '/services - Manage service list\n\n' +
       '*Manager Features:*\n' +
       '• View and manage all clients\n' +
       '• Add/remove services for clients\n' +
-      '• View monthly summary\n\n' +
+      '• View monthly summary\n' +
+      '• View recent invoices\n\n' +
       '*Linking:*\n' +
       '/manager STABLE_ID - Link as stable owner',
       { parse_mode: 'Markdown' }
@@ -216,4 +223,140 @@ async function handleHelp(ctx: BotContext): Promise<void> {
       { parse_mode: 'Markdown' }
     );
   }
+}
+
+async function handleProfile(ctx: BotContext): Promise<void> {
+  if (!ctx.session.stable_id) {
+    await ctx.reply('❌ Please link your account first:\n/manager YOUR_STABLE_ID');
+    return;
+  }
+
+  if (!ctx.session.is_owner) {
+    await ctx.reply('❌ This command is for stable owners only.');
+    return;
+  }
+
+  // Use a fake callback query context for the handler
+  await showProfileDirect(ctx);
+}
+
+async function handleServices(ctx: BotContext): Promise<void> {
+  if (!ctx.session.stable_id) {
+    await ctx.reply('❌ Please link your account first:\n/manager YOUR_STABLE_ID');
+    return;
+  }
+
+  if (!ctx.session.is_owner) {
+    await ctx.reply('❌ This command is for stable owners only.');
+    return;
+  }
+
+  await showServicesList(ctx);
+}
+
+async function showProfileDirect(ctx: BotContext): Promise<void> {
+  const stableId = ctx.session.stable_id;
+
+  if (!stableId) {
+    await ctx.reply('❌ Not linked to a stable');
+    return;
+  }
+
+  const supabase = getServiceClient();
+
+  // Get stable info
+  const { data: stable } = await supabase
+    .from('stables')
+    .select('name, logo_url')
+    .eq('id', stableId)
+    .single();
+
+  if (!stable) {
+    await ctx.reply('❌ Stable not found');
+    return;
+  }
+
+  // Get stats in parallel
+  const [clientsResult, servicesResult, assignmentsResult] = await Promise.all([
+    supabase
+      .from('clients')
+      .select('id', { count: 'exact', head: true })
+      .eq('stable_id', stableId)
+      .eq('archived', false),
+    supabase
+      .from('services')
+      .select('id', { count: 'exact', head: true })
+      .eq('stable_id', stableId)
+      .eq('archived', false),
+    supabase
+      .from('service_assignments')
+      .select('id', { count: 'exact', head: true })
+      .eq('stable_id', stableId)
+      .eq('active', true),
+  ]);
+
+  const clientCount = clientsResult.count ?? 0;
+  const serviceCount = servicesResult.count ?? 0;
+  const assignmentCount = assignmentsResult.count ?? 0;
+
+  const logoStatus = stable.logo_url ? '✅ Uploaded' : '❌ Not set';
+
+  await ctx.reply(
+    `👤 *Stable Profile*\n\n` +
+    `*Name:* ${stable.name}\n` +
+    `*Logo:* ${logoStatus}\n\n` +
+    `📊 *Statistics:*\n` +
+    `• Clients: ${clientCount}\n` +
+    `• Services: ${serviceCount}\n` +
+    `• Active Assignments: ${assignmentCount}\n\n` +
+    `_Use the web dashboard for full settings._`,
+    { parse_mode: 'Markdown' }
+  );
+}
+
+async function showServicesList(ctx: BotContext): Promise<void> {
+  const stableId = ctx.session.stable_id;
+
+  if (!stableId) {
+    await ctx.reply('❌ Not linked to a stable');
+    return;
+  }
+
+  const supabase = getServiceClient();
+
+  const { data: services } = await supabase
+    .from('services')
+    .select('id, name, price_cents, billing_unit')
+    .eq('stable_id', stableId)
+    .eq('archived', false)
+    .order('name', { ascending: true })
+    .limit(10);
+
+  if (!services || services.length === 0) {
+    await ctx.reply(
+      '📋 *Services*\n\n' +
+      'No services found.\n\n' +
+      'Use /menu → Add Service to create one.',
+      { parse_mode: 'Markdown' }
+    );
+    return;
+  }
+
+  const billingLabels: Record<string, string> = {
+    monthly: '📅 Monthly',
+    per_session: '🎯 Per Session',
+    one_time: '1️⃣ One-Time',
+  };
+
+  const lines = services.map((s) => {
+    const billing = billingLabels[s.billing_unit] || s.billing_unit;
+    return `• *${s.name}* - €${(s.price_cents / 100).toFixed(2)} (${billing})`;
+  });
+
+  await ctx.reply(
+    `📋 *Services*\n\n` +
+    lines.join('\n') +
+    '\n\n_Use /menu → Add Service to create more._',
+    { parse_mode: 'Markdown' }
+  );
 }
