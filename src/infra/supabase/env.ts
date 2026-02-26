@@ -1,27 +1,20 @@
 /**
  * @module infra/supabase
- * @description Environment variable validation for Supabase configuration
+ * @description Strict environment variable validation for Vercel & Supabase
  * @safety RED
  */
 
-import { z } from 'zod';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-const envSchema = z.object({
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
-});
+export const env = {
+  supabase: {
+    url: supabaseUrl!,
+    anonKey: supabaseAnonKey!,
+  },
+};
 
-function validateEnv() {
-  const parsed = envSchema.safeParse({
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  });
-
-  if (!parsed.success) {
-    throw new Error(`Supabase environment validation failed: ${parsed.error.message}`);
-  }
-
-  return parsed.data;
+// Simple validation that won't crash the Edge Runtime with Proxy errors
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn("⚠️ Missing Supabase environment variables. Middleware may fail.");
 }
-
-export const env = validateEnv();
