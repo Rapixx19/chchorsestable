@@ -4,6 +4,8 @@
  * @safety RED
  */
 
+export const runtime = 'edge';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getWebhookCallback } from '@/modules/telegram-bot/services/bot.service';
 
