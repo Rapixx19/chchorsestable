@@ -32,8 +32,10 @@ export function getServiceClient() {
 }
 
 /**
- * Middleware that resolves stable_id from the chat's linked client account.
- * Sets ctx.session.stable_id if the chat is linked to a client.
+ * Middleware that resolves stable_id from:
+ * 1. Owner's linked telegram (owner_telegram_chat_id)
+ * 2. Client's linked telegram (telegram_chat_id)
+ * Sets ctx.session.stable_id and ctx.session.is_owner accordingly.
  */
 export async function stableContextMiddleware(
   ctx: BotContext,
@@ -51,6 +53,21 @@ export async function stableContextMiddleware(
 
   try {
     const supabase = getServiceClient();
+
+    // 1. Check if user is a stable owner
+    const { data: stable } = await supabase
+      .from('stables')
+      .select('id')
+      .eq('owner_telegram_chat_id', chatId)
+      .single();
+
+    if (stable) {
+      ctx.session.stable_id = stable.id;
+      ctx.session.is_owner = true;
+      return next();
+    }
+
+    // 2. Fallback: check if user is a linked client
     const { data: client } = await supabase
       .from('clients')
       .select('stable_id')
@@ -59,9 +76,10 @@ export async function stableContextMiddleware(
 
     if (client?.stable_id) {
       ctx.session.stable_id = client.stable_id;
+      ctx.session.is_owner = false;
     }
   } catch {
-    // Client not linked yet, that's okay
+    // Not linked yet, that's okay
   }
 
   return next();

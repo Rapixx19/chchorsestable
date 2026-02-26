@@ -10,12 +10,15 @@ import { getServiceClient } from '../middleware/stable-context';
 import { clientsMenu } from './clients.menu';
 
 export const mainMenu = new Menu<BotContext>('root')
-  .submenu('👥 Manage Clients', 'clients')
-  .row()
-  .text('📊 Monthly Summary', async (ctx) => {
-    await showMonthlySummary(ctx);
-  })
-  .row();
+  .dynamic((ctx, range) => {
+    // Only show client management for stable owners
+    if (ctx.session.is_owner) {
+      range.submenu('👥 Manage Clients', 'clients').row();
+    }
+    range.text('📊 Monthly Summary', async (ctx) => {
+      await showMonthlySummary(ctx);
+    }).row();
+  });
 
 // Register child menu
 mainMenu.register(clientsMenu);

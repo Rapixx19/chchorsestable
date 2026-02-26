@@ -12,6 +12,7 @@ export interface SessionData {
   selectedClientId: string | null;
   clientsPage: number;
   servicesPage: number;
+  is_owner: boolean;
 }
 
 export function createInitialSessionData(): SessionData {
@@ -20,6 +21,7 @@ export function createInitialSessionData(): SessionData {
     selectedClientId: null,
     clientsPage: 0,
     servicesPage: 0,
+    is_owner: false,
   };
 }
 

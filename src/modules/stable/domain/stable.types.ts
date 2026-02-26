@@ -14,6 +14,7 @@ export interface Stable {
   bank_name?: string;
   account_number?: string;
   iban?: string;
+  owner_telegram_chat_id?: string;
 }
 
 export interface CreateStableInput {
