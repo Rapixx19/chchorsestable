@@ -1,13 +1,13 @@
 /**
  * @module app/horses
- * @description Horses management page
+ * @description Horses management page with premium grid layout
  * @safety GREEN
  */
 
 'use client';
 
 import { useState, useEffect } from 'react';
-import { CreateHorseForm, HorsesList } from '@/modules/horses/ui';
+import { CreateHorseForm, HorseGrid } from '@/modules/horses/ui';
 import { supabase } from '@/infra/supabase/client';
 
 export default function HorsesPage() {
@@ -56,14 +56,14 @@ export default function HorsesPage() {
   }
 
   return (
-    <main className="p-6 max-w-2xl mx-auto">
+    <main className="p-6 max-w-7xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Horses</h1>
 
-      <div className="mb-6">
+      <div className="mb-8">
         <CreateHorseForm stableId={stableId} onSuccess={handleHorseCreated} />
       </div>
 
-      <HorsesList stableId={stableId} refreshKey={refreshKey} />
+      <HorseGrid stableId={stableId} refreshKey={refreshKey} />
     </main>
   );
 }

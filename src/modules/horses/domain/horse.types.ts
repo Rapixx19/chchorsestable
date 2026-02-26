@@ -30,4 +30,9 @@ export interface UpdateHorseInput {
   breed?: string | null;
   birth_year?: number | null;
   notes?: string | null;
+  client_id?: string | null;
+}
+
+export interface HorseWithClient extends Horse {
+  client_name: string | null;
 }

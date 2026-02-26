@@ -5,7 +5,7 @@
  */
 
 import { supabase } from '@/infra/supabase/client';
-import type { Horse, CreateHorseInput, UpdateHorseInput } from '../domain/horse.types';
+import type { Horse, CreateHorseInput, UpdateHorseInput, HorseWithClient } from '../domain/horse.types';
 
 export interface HorseResult {
   success: boolean;
@@ -17,6 +17,12 @@ export interface HorsesResult {
   success: boolean;
   error?: string;
   horses?: Horse[];
+}
+
+export interface HorsesWithClientsResult {
+  success: boolean;
+  error?: string;
+  horses?: HorseWithClient[];
 }
 
 function mapHorse(data: Record<string, unknown>): Horse {
@@ -33,9 +39,26 @@ function mapHorse(data: Record<string, unknown>): Horse {
   };
 }
 
+function mapHorseWithClient(data: Record<string, unknown>): HorseWithClient {
+  const clients = data.clients as Record<string, unknown> | null;
+  return {
+    id: data.id as string,
+    stable_id: data.stable_id as string,
+    client_id: data.client_id as string,
+    name: data.name as string,
+    breed: data.breed as string | null,
+    birth_year: data.birth_year as number | null,
+    notes: data.notes as string | null,
+    archived: data.archived as boolean,
+    created_at: new Date(data.created_at as string),
+    client_name: clients?.name as string | null ?? null,
+  };
+}
+
 export interface HorseService {
   createHorse(input: CreateHorseInput): Promise<HorseResult>;
   getHorsesByStable(stableId: string): Promise<HorsesResult>;
+  getHorsesWithClients(stableId: string): Promise<HorsesWithClientsResult>;
   getHorsesByClient(clientId: string): Promise<HorsesResult>;
   getHorseById(id: string): Promise<HorseResult>;
   updateHorse(id: string, input: UpdateHorseInput): Promise<HorseResult>;
@@ -77,6 +100,21 @@ class SupabaseHorseService implements HorseService {
     }
 
     return { success: true, horses: data.map(mapHorse) };
+  }
+
+  async getHorsesWithClients(stableId: string): Promise<HorsesWithClientsResult> {
+    const { data, error } = await supabase
+      .from('horses')
+      .select(`*, clients(name)`)
+      .eq('stable_id', stableId)
+      .eq('archived', false)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, horses: data.map(mapHorseWithClient) };
   }
 
   async getHorsesByClient(clientId: string): Promise<HorsesResult> {
