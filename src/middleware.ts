@@ -13,16 +13,28 @@ const publicRoutes = ["/", "/login"];
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Allow public routes without any checks
   if (publicRoutes.includes(pathname)) {
     return NextResponse.next();
   }
 
-  const response = NextResponse.next();
+  // Validate env vars early
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
+  if (!supabaseUrl || !supabaseKey) {
+    console.error("[Middleware] Missing Supabase env vars:", {
+      url: !!supabaseUrl,
+      key: !!supabaseKey,
+    });
+    // Allow request to proceed - let the page handle auth
+    return NextResponse.next();
+  }
+
+  try {
+    const response = NextResponse.next();
+
+    const supabase = createServerClient(supabaseUrl, supabaseKey, {
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -33,32 +45,38 @@ export async function middleware(request: NextRequest) {
           });
         },
       },
+    });
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.redirect(new URL("/login", request.url));
     }
-  );
 
-  const { data: { user } } = await supabase.auth.getUser();
+    // Allow onboarding page for authenticated users
+    if (pathname === "/onboarding") {
+      return response;
+    }
 
-  if (!user) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
+    // Check if user has a stable
+    const { data: stable } = await supabase
+      .from("stables")
+      .select("id")
+      .eq("owner_id", user.id)
+      .single();
 
-  // Allow onboarding page for authenticated users
-  if (pathname === "/onboarding") {
+    if (!stable) {
+      return NextResponse.redirect(new URL("/onboarding", request.url));
+    }
+
     return response;
+  } catch (error) {
+    console.error("[Middleware] Error:", error);
+    // Fail open - let the page handle auth instead of crashing
+    return NextResponse.next();
   }
-
-  // Check if user has a stable
-  const { data: stable } = await supabase
-    .from("stables")
-    .select("id")
-    .eq("owner_id", user.id)
-    .single();
-
-  if (!stable) {
-    return NextResponse.redirect(new URL("/onboarding", request.url));
-  }
-
-  return response;
 }
 
 export const config = {
